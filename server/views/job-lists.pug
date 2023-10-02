@@ -1,0 +1,9 @@
+extends layout 
+
+block content 
+    h1=title
+    .nav-item.dropdown
+              a.nav-link.dropdown-toggle(data-bs-toggle='dropdown', href='#', role='button', aria-haspopup='true', aria-expanded='false') Profile
+              .dropdown-menu
+                a.dropdown-item(href='#') Update Profile Details
+                a.dropdown-item(href='#') Applied Jobs
