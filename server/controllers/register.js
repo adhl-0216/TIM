@@ -8,4 +8,5 @@ const signUp = (req, res, next) => {
 
 module.exports = {
   signIn,
+  signUp,
 };
