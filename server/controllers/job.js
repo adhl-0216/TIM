@@ -1,10 +1,7 @@
-const home = (req, res, next) => {
-    res.render("job-lists", { title: "Jobs" });
-  };
-  
-
+const jobList = (req, res, next) => {
+  res.render("jobList", { title: "TIM - Jobs" });
+};
 
 module.exports = {
-    home
+  jobList,
 };
-  
