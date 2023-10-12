@@ -16,19 +16,17 @@ html
           span.navbar-toggler-icon
         #navbarColor03.collapse.navbar-collapse
           ul.navbar-nav.me-auto
-            li.nav-item
-              a.nav-link.active(href='/')
-                | Home
-                span.visually-hidden (current)
+
 
             li.nav-item
               a.nav-link(href='/About') About
 
             li.nav-item.dropdown.ms-auto
-              a.nav-link.dropdown-toggle(data-bs-toggle='dropdown', href='#', role='button', aria-haspopup='true', aria-expanded='false') Profile
+              a.nav-link.dropdown-toggle(data-bs-toggle='dropdown', href='/profile', role='button', aria-haspopup='true', aria-expanded='false') Profile
               .dropdown-menu
-                a.dropdown-item(href='#') Update Profile Details
+                a.dropdown-item(href='/profile') Update Profile
                 a.dropdown-item(href='#') Applied Jobs
+                button.btn.btn-outline-danger.mx-2.py-1(href='#') Sign Out
           form.d-flex
             input.form-control.me-sm-2(type='search', placeholder='Search')
             button.btn.btn-secondary.my-2.my-sm-0(type='submit') Search
