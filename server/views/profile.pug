@@ -2,60 +2,71 @@ extends layout
 
 block content
     h1 Profile
-    
-    form
-        fieldset
-            .form-group
-            label.form-label.mt-4(for='userEmail') Email address
-            input#userEmail.form-control(type='email', aria-describedby='emailHelp', placeholder='Example@email.com')
-            small#emailHelp.form-text.text-muted We&apos;ll never share your email with anyone else.
 
-            .form-group
-            label.form-label.mt-4(for='userPassword') Password
-            input#userPassword.form-control(type='password', placeholder='Password', autocomplete='off')
-            
-            .form-group
-            label.form-label.mt-4(for='confirmPassword') Confirm Password
-            input#confirmPassword.form-control(type='password', placeholder='Confirm Password', autocomplete='off')
+    .row.d-flex
+        .col-md-6
+            form.m-3(action="")
+                h5 User Credentials
+                fieldset.row.g-3
+                    .form-group   
+                        .form-floating
+                            input#userEmail.form-control(type='email', aria-describedby='emailHelp', placeholder='Example@email.com')
+                            label(for='userEmail') Email address
+                                
+                        small#emailHelp.form-text.text-muted We&apos;ll never share your email with anyone else.
 
-            .form-group
-            label.form-label.mt-4(for='education') Education
-            select#education.form-select
-                option(selected='', hidden='') Select One
-                option Leaving Certificate
-                option Undergraduate
-                option Postgraduate
-                option Others
+                    .form-group
+                        .form-floating
+                            input#userPassword.form-control(type='password', placeholder='Password', autocomplete='off')
+                            label(for='userPassword') Password
 
-            .form-group
-            label.form-label.mt-4(for='exampleTextarea') Personal Description
-            textarea#exampleTextarea.form-control(rows='3')
-            .form-group
-            label.form-label.mt-4(for='formFile') CV
-            input#formFile.form-control(type='file')
 
-            fieldset.form-group
-            legend.mt-4 Education
-            .form-check
-                input#optionsRadios1.form-check-input(type='radio', name='optionsRadios', value='option1', checked='')
-                label.form-check-label(for='optionsRadios1')
-                | Option one is this and that&mdash;be sure to include why it&apos;s great
-            .form-check
-                input#optionsRadios2.form-check-input(type='radio', name='optionsRadios', value='option2')
-                label.form-check-label(for='optionsRadios2')
-                | Option two can be something else and selecting it will deselect option one
-            .form-check.disabled
-                input#optionsRadios3.form-check-input(type='radio', name='optionsRadios', value='option3', disabled='')
-                label.form-check-label(for='optionsRadios3')
-                | Option three is disabled
+                    .form-group            
+                        .form-floating
+                            input#confirmPassword.form-control(type='password', placeholder='Confirm Password', autocomplete='off')
+                            label(for='confirmPassword') Confirm Password
 
-            fieldset.form-group
-            legend.mt-4 Switches
-            .form-check.form-switch
-                input#flexSwitchCheckDefault.form-check-input(type='checkbox')
-                label.form-check-label(for='flexSwitchCheckDefault') Default switch checkbox input
-            .form-check.form-switch
-                input#flexSwitchCheckChecked.form-check-input(type='checkbox', checked='')
-                label.form-check-label(for='flexSwitchCheckChecked') Checked switch checkbox input
+                    .form-group.d-flex 
+                        button.btn.btn-primary.ms-auto(type='submit') Save Changes
 
-            button.btn.btn-primary(type='submit') Save Changes
+        .col-md-6
+            form.m-3(action="")
+                h5 Personal Profile
+                fieldset.row 
+                    .col-md-6.form-group
+                        .form-floating
+                            input#firstName.form-control(type='text', placeholder='First Name', autocomplete='off')
+                            label(for='userPassword') First Name
+                    .col-md-6.form-group
+                        .form-floating
+                            input#lastName.form-control(type='text', placeholder='Last Name', autocomplete='off')
+                            label(for='userPassword') Last Name
+                fieldset.row 
+                    .form-group
+                        label(for='userPassword') Date Of Birth
+                        input#firstName.form-control(type='text', placeholder='DD-MM-YYYY', autocomplete='off')
+
+                fieldset.row 
+                    .form-group
+                        label.form-label.mt-4(for='education') Education
+                        select#education.form-select
+                            option(selected='', hidden='') --- Select One ---
+                            option Leaving Certificate
+                            option Undergraduate
+                            option Postgraduate
+                            option Others
+
+                    .form-group
+                        label.form-label.mt-4(for='userDescription') Personal Description
+                        textarea#userDescription.form-control(rows='3', placeholder="Let your employers get to know you...")
+                    .form-group
+                        label.form-label.mt-4(for='userCV') CV
+                        input#userCV.form-control(type='file')
+
+                    .form-group
+                        .form-check.form-switch
+                            label.form-check-label(for='immediateAvailability') I am available immediately
+                            input#immediateAvailability.form-check-input.form-control-lg(type='checkbox')
+
+                    .form-group.d-flex 
+                        button.btn.btn-primary.ms-auto(type='submit') Save Changes
