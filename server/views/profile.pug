@@ -1,0 +1,61 @@
+extends layout 
+
+block content
+    h1 Profile
+    
+    form
+        fieldset
+            .form-group
+            label.form-label.mt-4(for='userEmail') Email address
+            input#userEmail.form-control(type='email', aria-describedby='emailHelp', placeholder='Example@email.com')
+            small#emailHelp.form-text.text-muted We&apos;ll never share your email with anyone else.
+
+            .form-group
+            label.form-label.mt-4(for='userPassword') Password
+            input#userPassword.form-control(type='password', placeholder='Password', autocomplete='off')
+            
+            .form-group
+            label.form-label.mt-4(for='confirmPassword') Confirm Password
+            input#confirmPassword.form-control(type='password', placeholder='Confirm Password', autocomplete='off')
+
+            .form-group
+            label.form-label.mt-4(for='education') Education
+            select#education.form-select
+                option(selected='', hidden='') Select One
+                option Leaving Certificate
+                option Undergraduate
+                option Postgraduate
+                option Others
+
+            .form-group
+            label.form-label.mt-4(for='exampleTextarea') Personal Description
+            textarea#exampleTextarea.form-control(rows='3')
+            .form-group
+            label.form-label.mt-4(for='formFile') CV
+            input#formFile.form-control(type='file')
+
+            fieldset.form-group
+            legend.mt-4 Education
+            .form-check
+                input#optionsRadios1.form-check-input(type='radio', name='optionsRadios', value='option1', checked='')
+                label.form-check-label(for='optionsRadios1')
+                | Option one is this and that&mdash;be sure to include why it&apos;s great
+            .form-check
+                input#optionsRadios2.form-check-input(type='radio', name='optionsRadios', value='option2')
+                label.form-check-label(for='optionsRadios2')
+                | Option two can be something else and selecting it will deselect option one
+            .form-check.disabled
+                input#optionsRadios3.form-check-input(type='radio', name='optionsRadios', value='option3', disabled='')
+                label.form-check-label(for='optionsRadios3')
+                | Option three is disabled
+
+            fieldset.form-group
+            legend.mt-4 Switches
+            .form-check.form-switch
+                input#flexSwitchCheckDefault.form-check-input(type='checkbox')
+                label.form-check-label(for='flexSwitchCheckDefault') Default switch checkbox input
+            .form-check.form-switch
+                input#flexSwitchCheckChecked.form-check-input(type='checkbox', checked='')
+                label.form-check-label(for='flexSwitchCheckChecked') Checked switch checkbox input
+
+            button.btn.btn-primary(type='submit') Save Changes

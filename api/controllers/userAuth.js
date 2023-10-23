@@ -1,12 +1,11 @@
-const signIn = (req, res, next) => {
-  res.render("signIn", { title: "TIM | Sign In" });
-};
-
-const signUp = (req, res, next) => {
-  res.render("signUp", { title: "TIM | Sign Up" });
-};
+const userCreate = (req, res, next) => {};
+const userReadOne = (req, res, next) => {};
+const userUpdate = (req, res, next) => {};
+const userDelete = (req, res, next) => {};
 
 module.exports = {
-  signIn,
-  signUp,
+  userCreate,
+  userReadOne,
+  userUpdate,
+  userDelete,
 };
