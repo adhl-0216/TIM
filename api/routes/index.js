@@ -1,15 +1,23 @@
 var express = require("express");
 var router = express.Router();
 
-const ctrlAbout = require("../controllers/about");
-const ctrlUserAuth = require("../controllers/userAuth");
+const ctrlUser = require("../controllers/user");
 const ctrlJob = require("../controllers/job");
-const ctrlProfile = require("../controllers/profile");
-/* GET home page. */
-router.get("/", ctrlJob.jobs);
-router.get("/sign-in", ctrlUserAuth.signIn);
-router.get("/sign-up", ctrlUserAuth.signUp);
-router.get("/about", ctrlAbout.about);
-router.get("/profile", ctrlProfile.updateProfile);
+
+//job
+router.route("/jobs").post(ctrlJob.jobCreate).get(ctrlJob.jobsByLatest);
+
+router
+  .route("/jobs/:jobId")
+  .get(ctrlJob.jobReadOne)
+  .put(ctrlJob.jobUpdateOne)
+  .delete(ctrlJob.jobDeleteOne);
+//user
+router
+  .route("/users")
+  .post(ctrlUser.userCreate)
+  .get(ctrlUser.userReadOne)
+  .put(ctrlUser.userUpdateOne)
+  .delete(ctrlUser.userDeleteOne);
 
 module.exports = router;

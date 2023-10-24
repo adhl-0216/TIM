@@ -1,14 +1,15 @@
 extends layout 
 
 block content 
+  .row.gap-3
     h1 All Jobs
     each job in jobs
-      .card.mb-3
-        .card-header
-          .d-flex.align-bottom
+      .card.px-0
+        .card-header.d-flex.gap-3
             a(href='#') 
-              h3= job.title
-            p= job.location
+              h4= job.title
+            .d-inline-flex
+              p= job.location
             .text-muted.ms-auto
               p=job.dateCreated
         .row.g-0
@@ -25,4 +26,3 @@ block content
               span.badge.rounded-pill.bg-light.mx-1= tag  
           .card-body.container.col-md-2.text-center
             a.btn.btn-outline-primary.align-bottom(href='#') Quick Apply
-

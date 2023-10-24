@@ -1,6 +1,35 @@
-extends layout 
+extends layout
 
-block content 
-    h1= title
+block content
 
-    a(href='/sign-in') Back to Sign In
+    .row.justify-content-center
+      a(href='/sign-in')
+        |  Back to Sign In
+      .col-md-4.card
+        .card-header
+          strong  Sign up to join TIM!
+        .card-body
+          form(action='/',method='POST')
+              
+              fieldset.row.gap-2
+                .form-group
+                  .input-group
+                    span.input-group-addon
+                      i.glyphicon.glyphicon-user
+                    input.form-control(placeholder='Email', name='email', type='text', autofocus='')
+
+                .form-group
+                  .input-group
+                    span.input-group-addon
+                      i.glyphicon.glyphicon-lock
+                    input.form-control(placeholder='Password', name='password', type='password', value='')
+                .form-group
+                  .input-group
+                    span.input-group-addon
+                      i.glyphicon.glyphicon-lock
+                    input.form-control(placeholder='Confirm Password', name='cfmPassword', type='password', value='')
+
+                .form-group.d-flex
+                  button.btn.btn-primary.mx-auto(type='submit') Sign In
+
+

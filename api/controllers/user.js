@@ -1,11 +1,11 @@
 const userCreate = (req, res, next) => {};
 const userReadOne = (req, res, next) => {};
-const userUpdate = (req, res, next) => {};
-const userDelete = (req, res, next) => {};
+const userUpdateOne = (req, res, next) => {};
+const userDeleteOne = (req, res, next) => {};
 
 module.exports = {
   userCreate,
   userReadOne,
-  userUpdate,
-  userDelete,
+  userUpdateOne,
+  userDeleteOne,
 };

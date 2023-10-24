@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
-const jobSchema = new mongoose.Schema({
+const jobSchema = new mongoose.Schema(
+  {
   title: {
     type: String,
     required: [true, "Title can not be empty."],
