@@ -1,20 +1,25 @@
 const mongoose = require("mongoose");
 
-const dotenv = require("dotenv");
-dotenv.config();
-const uri = process.env.URI;
+const dotenv = require("dotenv").config();
 
 try {
   mongoose
-    .connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+    .connect(process.env.URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
     .then(
       () => {
-        console.log(" Mongoose is connected");
+        console.log("Mongoose is connected");
       },
       (err) => {
         console.log(err);
       }
     );
 } catch (e) {
-  console.log("could not connect");
+  console.log(e);
 }
+
+require("./job")
+require("./jobApplication")
+require("./user")

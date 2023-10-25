@@ -4,23 +4,27 @@ const Job = mongoose.model("Job");
 const jobCreate = (req, res, next) => {
   Job.create({
     title: req.body.title,
-    location: req.body.location,
+    address: req.body.address,
     description: req.body.description,
     hourlyRate: req.body.hourlyRate,
     weeklyHours: req.body.weeklyHours,
-    schedule: req.body.schedule,
-    tags: req.body.tags,
+    schedule: JSON.parse(req.body.schedule),
+    tags: JSON.parse(req.body.tags),
     dateCreated: req.body.dateCreated,
-  }).then((err, job) => {
-    if (err) {
-      res.status(400).json(err);
-    } else {
+  })
+    .then((job) => {
       res.status(201).json(job);
-    }
-  });
+    })
+    .catch((err) => res.status(400).json(err));
 };
 const jobsByLatest = (req, res, next) => {};
-const jobReadOne = (req, res, next) => {};
+const jobReadOne = (req, res, next) => {
+  Job.findById(req.params.jobId)
+    .then((job) => {
+      job ? res.status(201).json(job) : res.status(404).json("message: Id Not Found");
+    } )
+    .catch((err) => res.status(400).json(err));
+};
 const jobUpdateOne = (req, res, next) => {};
 const jobDeleteOne = (req, res, next) => {};
 

@@ -14,10 +14,12 @@ router
   .delete(ctrlJob.jobDeleteOne);
 //user
 router
-  .route("/users")
-  .post(ctrlUser.userCreate)
+  .route("/user/:userId")
   .get(ctrlUser.userReadOne)
   .put(ctrlUser.userUpdateOne)
   .delete(ctrlUser.userDeleteOne);
+
+router.route("/sign-in").post(ctrlUser.userAuthenticate);
+router.route("/sign-up").post(ctrlUser.userCreate);
 
 module.exports = router;

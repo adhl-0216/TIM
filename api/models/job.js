@@ -1,12 +1,11 @@
 const mongoose = require("mongoose");
 
-const jobSchema = new mongoose.Schema(
-  {
+const jobSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, "Title can not be empty."],
   },
-  location: {
+  address: {
     type: String,
     required: [true, "Location can not be empty."],
   },
@@ -48,4 +47,4 @@ const jobSchema = new mongoose.Schema(
   },
 });
 
-mongoose.model = ("Job", jobSchema);
+mongoose.model("Job", jobSchema);

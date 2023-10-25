@@ -1,0 +1,103 @@
+extends layout 
+
+block content
+    ul.nav.nav-tabs(role='tablist')
+        li.nav-item(role='presentation')
+            a.nav-link.active(data-bs-toggle='tab', href='#userDetails', aria-selected='true', role='tab', tabindex='-1') Profile
+        li.nav-item(role='presentation')
+            a.nav-link(data-bs-toggle='tab', href='#security', aria-selected='false', role='tab') Security
+        li.nav-item(role='presentation')
+            a.nav-link(data-bs-toggle='tab', href='#applications', aria-selected='false', role='tab') Applications
+        
+        
+
+    #myTabContent.tab-content
+        #userDetails.tab-pane.fade.active.show(role='tabpanel')
+            form.m-3
+                h5 Personal Details
+                fieldset.row 
+                    .col-md-6.form-group
+                        .form-floating
+                            input#firstName.form-control(type='text', placeholder='First Name', autocomplete='off')
+                            label(for='firstName') First Name
+                    .col-md-6.form-group
+                        .form-floating
+                            input#lastName.form-control(type='text', placeholder='Last Name', autocomplete='off')
+                            label(for='lastName') Last Name
+                fieldset.row 
+                    .form-group
+                        label(for='dateOfBirth') Date Of Birth
+                        input#dateOfBirth.form-control(type='text', placeholder='DD-MM-YYYY', autocomplete='off')
+                fieldset.row 
+                    .form-group
+                        label(for='address') Address
+                        input#address.form-control(type='text', placeholder='123 Main Street, Anytown', autocomplete='off')
+                fieldset.row 
+                    .form-group
+                        label(for='mobileNumber') Mobile Number
+                        input#mobileNumber.form-control(type='text', placeholder='+353 12 345 6789', autocomplete='off')
+
+                fieldset.row 
+                    .form-group
+                        label.form-label.mt-4(for='education') Education
+                        select#education.form-select
+                            option(selected='', hidden='') --- Select One ---
+                            option Leaving Certificate
+                            option Undergraduate
+                            option Postgraduate
+                            option Others
+
+                    .form-group
+                        label.form-label.mt-4(for='userDescription') Personal Description
+                        textarea#userDescription.form-control(rows='3', placeholder="Let your employers get to know you...")
+                    .form-group
+                        label.form-label.mt-4(for='userCV') CV
+                        input#userCV.form-control(type='file')
+
+                    .form-group.my-3
+                        .form-check.form-switch
+                            label.form-check-label(for='immediateAvailability') I am available immediately
+                            input#immediateAvailability.form-check-input.form-control-lg(type='checkbox')
+
+                    .form-group.d-flex 
+                        button.btn.btn-primary.ms-auto(type='submit') Save Changes
+
+        #security.tab-pane.fade.show(role='tabpanel')
+            form.m-3
+                h5 Account Credentials
+                fieldset.row.g-3
+                    .form-group   
+                        .form-floating
+                            input#userEmail.form-control(type='email', aria-describedby='emailHelp', placeholder='Example@email.com')
+                            label(for='userEmail') Email address
+                                
+                        small#emailHelp.form-text.text-muted We&apos;ll never share your email with anyone else.
+
+                    .form-group
+                        .form-floating
+                            input#userPassword.form-control(type='password', placeholder='Password', autocomplete='off')
+                            label(for='userPassword') Password
+
+
+                    .form-group            
+                        .form-floating
+                            input#confirmPassword.form-control(type='password', placeholder='Confirm Password', autocomplete='off')
+                            label(for='confirmPassword') Confirm Password
+
+                    .form-group.d-flex 
+                        button.btn.btn-primary.ms-auto(type='submit') Save Changes
+                        
+        #applications.tab-pane.fade.show(role='tabpanel')
+            .m-3
+                h5 Applied Jobs
+                ul.list-group 
+                    li.list-group-item.list-group-item-primary.d-flex.justify-content-between.align-items-center
+                        a(href='#') Cashier
+                    li.list-group-item.list-group-item-primary.d-flex.justify-content-between.align-items-center
+                        a(href='#') Bartender
+                h5 Archived
+                ul.list-group 
+                    li.list-group-item.list-group-item-primary.d-flex.justify-content-between.align-items-center
+                        a(href='#') Barista
+
+    a.btn.btn-outline-danger.ms-auto(href='/') Sign Out

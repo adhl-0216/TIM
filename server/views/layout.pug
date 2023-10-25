@@ -11,20 +11,14 @@ html
   body
     nav.navbar.navbar-expand-lg.bg-light(data-bs-theme='light')
       .container-fluid
-        a.navbar-brand(href='/') T.I.M.
+        a.navbar-brand(href='/') TIM
         button.navbar-toggler(type='button', data-bs-toggle='collapse', data-bs-target='#navbarColor03', aria-controls='navbarColor03', aria-expanded='false', aria-label='Toggle navigation')
           span.navbar-toggler-icon
         #navbarColor03.collapse.navbar-collapse
           ul.navbar-nav.me-auto
 
-
-            li.nav-item
-              a.nav-link(href='/about') About
-
             li.nav-item
               a.nav-link(href='/sign-in') Profile
-
-
 
           form.d-flex
             input.form-control.me-sm-2(type='search', placeholder='Search')
@@ -32,6 +26,18 @@ html
   
     .m-5
       block content
+
+    footer.footer.px-3.mt-auto
+      .footer-content
+        .footer-links.d-inline-flex.gap-3
+          a(href='/about') About Us
+        
+          a(href='/about') Contact Us
+        
+          a(href='privacy.html') Privacy Policy
+      .footer-bottom
+        | &copy; 2023 TIM | All rights reserved
+
 
     script(src='https://code.jquery.com/jquery-3.1.1.slim.min.js')
     script(src='https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js')

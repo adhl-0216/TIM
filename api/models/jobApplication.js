@@ -1,4 +1,3 @@
-const { ObjectId } = require("mongodb");
 const mongoose = require("mongoose");
 
 const jobApplicationSchema = new mongoose.Schema({
@@ -14,4 +13,4 @@ const jobApplicationSchema = new mongoose.Schema({
   },
 });
 
-mongoose.model = ("JobApplication", jobApplicationSchema);
+mongoose.model("Job-Application", jobApplicationSchema);

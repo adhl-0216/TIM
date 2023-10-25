@@ -3,10 +3,10 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
+require("./api/models/db")
 
-var indexRouter = require("./server/routes/index");
-var apiRouter = require("./server/routes/index");
-var db = require("./api/models/db");
+const indexRouter = require("./server/routes/index");
+const apiRouter = require("./api/routes/index");
 
 var app = express();
 
