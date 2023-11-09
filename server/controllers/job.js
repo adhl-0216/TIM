@@ -1,8 +1,9 @@
 const axios = require("axios");
 
-const apiOptions = {
-  server: "localhost:3000",
-};
+const server =
+  process.env.NODE_ENV == "PRODUCTION"
+    ? "https://tim-2k4a.onrender.com"
+    : "http://localhost:2048";
 
 const _renderJobs = (req, res, data) => {
   res.render("jobList", {
@@ -12,11 +13,14 @@ const _renderJobs = (req, res, data) => {
 };
 
 const jobList = async (req, res) => {
-  axios.get("http://localhost:3000/api/jobs")
+  axios
+    .get(server + "/api/jobs")
     .then((response) => {
       _renderJobs(req, res, response.data);
     })
-    .catch((error) => { console.log(error); });
+    .catch((error) => {
+      console.log(error);
+    });
 };
 
 module.exports = {
