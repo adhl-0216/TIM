@@ -10,8 +10,7 @@ router.route("/jobs").post(ctrlJob.jobCreate).get(ctrlJob.jobsByLatest);
 router
   .route("/jobs/:jobId")
   .get(ctrlJob.jobReadOne)
-  .put(ctrlJob.jobUpdateOne)
-  .delete(ctrlJob.jobDeleteOne);
+
 //user
 router
   .route("/user/:userId")

@@ -12,7 +12,7 @@ const _renderJobs = (req, res, data) => {
   });
 };
 
-const jobList = async (req, res) => {
+const jobList = (req, res) => {
   axios
     .get(server + "/api/jobs")
     .then((response) => {
@@ -23,6 +23,25 @@ const jobList = async (req, res) => {
     });
 };
 
+const _renderJobDetails = (req, res, data) => {
+  res.render("jobDetails", {
+    title: "TIM | " + data.title,
+    job: data,
+  });
+};
+
+const jobDetails = (req, res) => {
+  axios
+    .get(server + "/api/jobs/" + req.params.jobId)
+    .then((response) => {
+      _renderJobDetails(req, res, response.data);
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+};
+
 module.exports = {
   jobList,
+  jobDetails,
 };

@@ -32,13 +32,10 @@ const jobReadOne = (req, res, next) => {
     } )
     .catch((err) => res.status(400).json(err));
 };
-const jobUpdateOne = (req, res, next) => {};
-const jobDeleteOne = (req, res, next) => {};
+
 
 module.exports = {
   jobCreate,
   jobReadOne,
-  jobUpdateOne,
-  jobDeleteOne,
   jobsByLatest,
 };
