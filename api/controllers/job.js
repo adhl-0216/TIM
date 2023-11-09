@@ -17,7 +17,14 @@ const jobCreate = (req, res, next) => {
     })
     .catch((err) => res.status(400).json(err));
 };
-const jobsByLatest = (req, res, next) => {};
+const jobsByLatest = (req, res, next) => {
+  Job.find()
+  .sort({ dateCreated: -1 })
+  .then((jobs) => {
+      res.status(201).json(jobs);
+    })
+  .catch((err) => res.status(400).json(err));
+};
 const jobReadOne = (req, res, next) => {
   Job.findById(req.params.jobId)
     .then((job) => {
