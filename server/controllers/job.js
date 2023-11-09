@@ -15,7 +15,8 @@ const jobList = async (req, res) => {
   axios.get("http://localhost:3000/api/jobs")
     .then((response) => {
       _renderJobs(req, res, response.data);
-    }).catch((error) => {console.log(error);});
+    })
+    .catch((error) => { console.log(error); });
 };
 
 module.exports = {
