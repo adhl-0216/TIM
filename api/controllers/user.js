@@ -1,4 +1,5 @@
 const mongoose = require("mongoose")
+const passport = require("passport")
 const User = mongoose.model("User")
 
 const userCreate = (req, res, next) => {
@@ -16,7 +17,7 @@ const userCreate = (req, res, next) => {
     // isAvailable: req.body.isAvailable,
   }).then((user) => {
     res.status(201).json(user)
-  });
+  }); 
  };
 const userReadOne = (req, res, next) => {};
 const userUpdateOne = (req, res, next) => {};

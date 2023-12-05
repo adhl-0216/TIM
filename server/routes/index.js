@@ -1,5 +1,9 @@
-var express = require("express");
-var router = express.Router();
+const express = require("express");
+const passport = require("passport");
+const router = express.Router();
+
+
+
 
 const ctrlAccount = require("../controllers/account");
 const ctrlJob = require("../controllers/job");
@@ -11,8 +15,10 @@ router.get("/", ctrlJob.jobList);
 router.get("/jobs/:jobId", ctrlJob.jobDetails);
 
 
-router.get("/sign-in", ctrlAccount.signIn);
+
 router.get("/sign-up", ctrlAccount.signUp);
+
+router.get("/sign-in", ctrlAccount.signIn);
 router.get("/account", ctrlAccount.account);
 
 

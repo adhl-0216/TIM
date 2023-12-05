@@ -6,7 +6,7 @@ block content
       .card-header
         strong  Sign in to continue
       .card-body
-        form(action='/',method='POST')
+        form(action='/sign-in',method='POST')
             .center-block
               img.profile-img(src='https://lh5.googleusercontent.com/-b0-k99FZlyE/AAAAAAAAAAI/AAAAAAAAAAA/eu7opA4byxI/photo.jpg?sz=120', alt='')
             fieldset.row.gap-2
@@ -23,7 +23,7 @@ block content
                   input.form-control(placeholder='Password', name='password', type='password', value='')
 
               .form-group.d-flex
-                a.btn.btn-primary.mx-auto(href='/account') Sign In
+                button.btn.btn-primary.mx-auto(type="submit") Sign In
 
       .card-footer
         | Don&apos;t have an account?  

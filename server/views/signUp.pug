@@ -9,7 +9,7 @@ block content
         .card-header
           strong  Sign up to join TIM!
         .card-body
-          form(action='/',method='POST')
+          form(action='/sign-up',method='POST')
               
               fieldset.row.gap-2
                 .form-group
@@ -30,6 +30,6 @@ block content
                     input.form-control(placeholder='Confirm Password', name='cfmPassword', type='password', value='')
 
                 .form-group.d-flex
-                  a.btn.btn-primary.mx-auto(href='/sign-in') Sign Up
+                  button.btn.btn-primary.mx-auto(type="submit") Sign Up
 
 

@@ -7,9 +7,7 @@ const ctrlJob = require("../controllers/job");
 //job
 router.route("/jobs").post(ctrlJob.jobCreate).get(ctrlJob.jobsByLatest);
 
-router
-  .route("/jobs/:jobId")
-  .get(ctrlJob.jobReadOne)
+router.route("/jobs/:jobId").get(ctrlJob.jobReadOne);
 
 //user
 router
@@ -18,7 +16,7 @@ router
   .put(ctrlUser.userUpdateOne)
   .delete(ctrlUser.userDeleteOne);
 
-router.route("/sign-in").post(ctrlUser.userAuthenticate);
 router.route("/sign-up").post(ctrlUser.userCreate);
+router.route("/sign-in").post(ctrlUser.userAuthenticate);
 
 module.exports = router;
