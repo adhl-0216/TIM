@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, isDevMode } from '@angular/core';
 import { Job } from './job-list/job-list.component';
 
 @Injectable({
@@ -8,10 +8,8 @@ import { Job } from './job-list/job-list.component';
 export class ApiDataService {
   constructor(private http: HttpClient) {}
 
-  private apiBaseUrl : string =
-    process.env['NODE_ENV'] == 'PRODUCTION'
-      ? 'https://tim-2k4a.onrender.com/api'
-      : 'http://localhost:2048/api';
+  private apiBaseUrl: string = (isDevMode()) ?  "http://localhost:2048/api" :  'https://tim-2k4a.onrender.com/api'
+  
 
   public getJobs(): Promise<Job[]> {
     const url: string = this.apiBaseUrl + '/jobs';
