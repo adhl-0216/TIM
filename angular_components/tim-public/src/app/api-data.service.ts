@@ -8,7 +8,10 @@ import { Job } from './job-list/job-list.component';
 export class ApiDataService {
   constructor(private http: HttpClient) {}
 
-  private apiBaseUrl: string = 'http://localhost:2048/api';
+  private apiBaseUrl : string =
+    process.env['NODE_ENV'] == 'PRODUCTION'
+      ? 'https://tim-2k4a.onrender.com/api'
+      : 'http://localhost:2048/ap';
 
   public getJobs(): Promise<Job[]> {
     const url: string = this.apiBaseUrl + '/jobs';
@@ -16,8 +19,8 @@ export class ApiDataService {
     return this.http
       .get(url)
       .toPromise()
-      .then(res => res as Job[])
-      .catch(this.handleError);  
+      .then((res) => res as Job[])
+      .catch(this.handleError);
   }
 
   private handleError(error: any): Promise<any> {

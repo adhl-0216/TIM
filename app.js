@@ -3,17 +3,17 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
+const flash = require("connect-flash");
 require("./api/models/db");
 
 const indexRouter = require("./server/routes/index");
+const userRouter = require("./server/routes/user");
 const apiRouter = require("./api/routes/index");
 
 const passport = require("passport");
 const User = require("./api/models/user");
 const LocalStrategy = require("passport-local").Strategy;
 const session = require("express-session");
-
-const authController = require("./server/controllers/authController");
 
 var app = express();
 
@@ -22,6 +22,7 @@ var app = express();
 app.set("views", path.join(__dirname, "server", "views"));
 app.set("view engine", "pug");
 
+app.use(flash());
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -29,7 +30,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(path.join(__dirname, "app_public")));
 
-app.use("/api", function (req, res, next) {
+app.use("/", function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Headers",
@@ -37,39 +38,32 @@ app.use("/api", function (req, res, next) {
   );
   next();
 });
-app.use("/", indexRouter);
-app.use("/api", apiRouter);
 
 app.use(
   session({
-    secret: "your-secret-key",
+    secret: "MTU Web Frameworks 2023",
     resave: false,
     saveUninitialized: false,
   })
 );
+
 app.use(passport.initialize());
 app.use(passport.session());
 
+//passport middleware
 passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-//routes
-app.get("/", (req, res) => {
-  res.send("Home Page");
-});
+//Index Router
 
-app.get("/sign-up", authController.registerUser);
-app.post("/sign-up", authController.postRegisterUser);
+app.use("/", indexRouter);
 
-app.get("/sign-in", authController.loginUser);
-app.post("/sign-in", authController.postLoginUser);
+//Authentication
+app.use("/auth", userRouter);
 
-app.get("/sign-out", authController.logoutUser);
-
-app.get("/", authController.isAuthenticated, (req, res) => {
-  res.render("dashboard", { user: req.user });
-});
+//Data API
+app.use("/api", apiRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

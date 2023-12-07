@@ -1,62 +1,65 @@
-<div class="m-5">
-  <div class="row gap-3">
-    <h1>{{ header }}</h1>
-    <div *ngFor="let job of jobs" class="card px-0">
-      <div class="card-header d-flex gap-3">
-        <a href="/jobs/{{ job._id }}">
-          <h4>{{ job.title }}</h4></a
+<div *ngFor="let job of jobs" class="card m-3">
+  <div class="card-header">
+    <div class="d-flex">
+      <h2>
+        <a href="/jobs/{{ job._id }}" style="text-decoration: none">
+          {{ job.title }}
+        </a>
+      </h2>
+      <span class="text-muted ms-auto">
+        {{ job.dateCreated | date : "yyyy-MM-dd" }}
+      </span>
+    </div>
+    <h6 class="m-0">{{ job.address }}</h6>
+  </div>
+
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4">
+        <svg
+          class="d-block user-select-none"
+          xmlns="http://www.w3.org/2000/svg"
+          width="100%"
+          height="100%"
+          aria-label="Placeholder: Image cap"
+          focusable="false"
+          role="img"
+          preserveAspectRatio="xMidYMid slice"
+          viewBox="0 0 318 180"
+          style="font-size: 1.125rem; text-anchor: middle"
         >
-        <div class="d-inline-flex">
-          <p>{{ job.address }}</p>
-        </div>
-        <div class="text-muted ms-auto">
-          <p>{{ job.dateCreated | date : "yyyy-MM-dd" }}</p>
-        </div>
+          <rect width="100%" height="100%" fill="#868e96"></rect>
+          <text x="50%" y="50%" fill="#dee2e6" dy=".3em">Image cap</text>
+        </svg>
       </div>
-      <div class="row g-0">
-        <div class="col-md-4">
-          <svg
-            class="d-block user-select-none"
-            xmlns="http://www.w3.org/2000/svg"
-            width="100%"
-            height="100%"
-            aria-label="Placeholder: Image cap"
-            focusable="false"
-            role="img"
-            preserveAspectRatio="xMidYMid slice"
-            viewBox="0 0 318 180"
-            style="font-size: 1.125rem; text-anchor: middle"
-          >
-            <rect width="100%" height="100%" fill="#868e96"></rect>
-            <text x="50%" y="50%" fill="#dee2e6" dy=".3em">Image cap</text>
-          </svg>
-        </div>
-        <div class="card-body col-md-6">
-          <div class="schedule">
+      <div class="col-md-6">
+        <p class="card-text">
+          {{ job.description }}
+        </p>
+        <p class="fw-bold">Hourly Rate: &euro; {{ job.hourlyRate }}</p>
+        <p class="fw-bold">Weekly Hours: {{ job.weeklyHours }}</p>
+        <div id="badges" class="mt-auto row gap-2">
+          <div id="schedule">
             <span
               *ngFor="let day of job.schedule"
               class="badge rounded-pill bg-info mx-1"
               >{{ day }}
             </span>
           </div>
-          <p class="card-text">
-            {{ job.description }}
-          </p>
-          <p class="card-text">Hourly Rate: {{ job.hourlyRate }}</p>
-          <p class="card-text">Weekly Hours: {{ job.weeklyHours }}</p>
-          <div class="tags">
+          <div id="tags">
             <span
               *ngFor="let tag of job.tags"
-              class="badge rounded-pill bg-light mx-1"
+              class="badge rounded-pill bg-primary mx-1"
               >{{ tag }}
             </span>
           </div>
         </div>
-        <div class="card-body container col-md-2 text-center">
-          <a class="btn btn-outline-primary align-bottom" href="/"
-            >Quick Apply</a
-          >
-        </div>
+      </div>
+
+      <div class="col-md-2 d-flex">
+        <button class="btn btn-outline-primary ms-auto mt-auto" href="#">
+          Quick Apply
+        </button>
       </div>
     </div>
   </div>

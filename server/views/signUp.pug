@@ -1,35 +1,16 @@
 extends layout
 
 block content
+  .row.justify-content-center
+    .col-md-4
+      app-sign-up ...
 
-    .row.justify-content-center
-      a(href='/sign-in')
-        |  Back to Sign In
-      .col-md-4.card
-        .card-header
-          strong  Sign up to join TIM!
-        .card-body
-          form(action='/sign-up',method='POST')
-              
-              fieldset.row.gap-2
-                .form-group
-                  .input-group
-                    span.input-group-addon
-                      i.glyphicon.glyphicon-user
-                    input.form-control(placeholder='Email', name='email', type='text', autofocus='')
+      if error != "" && error != null
+        .alert.alert-dismissible.alert-danger.mt-3
+              button.btn-close(type='button', data-bs-dismiss='alert')
+              p= error
 
-                .form-group
-                  .input-group
-                    span.input-group-addon
-                      i.glyphicon.glyphicon-lock
-                    input.form-control(placeholder='Password', name='password', type='password', value='')
-                .form-group
-                  .input-group
-                    span.input-group-addon
-                      i.glyphicon.glyphicon-lock
-                    input.form-control(placeholder='Confirm Password', name='cfmPassword', type='password', value='')
-
-                .form-group.d-flex
-                  button.btn.btn-primary.mx-auto(type="submit") Sign Up
-
-
+  div(hidden) 
+    app-job-list
+    app-user-account
+    app-sign-in

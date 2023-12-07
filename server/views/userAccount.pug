@@ -1,6 +1,9 @@
 extends layout 
 
 block content
+
+    h1 Hi, #{user.username}
+    
     ul.nav.nav-tabs(role='tablist')
         li.nav-item(role='presentation')
             a.nav-link.active(data-bs-toggle='tab', href='#userDetails', aria-selected='true', role='tab', tabindex='-1') Profile
@@ -18,20 +21,24 @@ block content
                 fieldset.row 
                     .col-md-6.form-group
                         .form-floating
-                            input#firstName.form-control(type='text', placeholder='First Name', autocomplete='off')
+                            input#firstName.form-control(type='text', placeholder='First Name', autocomplete='off' value=user.firstName)
                             label(for='firstName') First Name
                     .col-md-6.form-group
                         .form-floating
-                            input#lastName.form-control(type='text', placeholder='Last Name', autocomplete='off')
+                            input#lastName.form-control(type='text', placeholder='Last Name', autocomplete='off' value=user.lastName)
                             label(for='lastName') Last Name
                 fieldset.row 
                     .form-group
                         label(for='dateOfBirth') Date Of Birth
-                        input#dateOfBirth.form-control(type='text', placeholder='DD-MM-YYYY', autocomplete='off')
+                        input#dateOfBirth.form-control(type='text', placeholder='DD-MM-YYYY', autocomplete='off' value=user.dateOfBirth)
                 fieldset.row 
                     .form-group
                         label(for='address') Address
-                        input#address.form-control(type='text', placeholder='123 Main Street, Anytown', autocomplete='off')
+                        input#address.form-control(type='text', placeholder='123 Main Street, Anytown', autocomplete='off' value=user.address)
+                fieldset.row 
+                    .form-group
+                        label(for='mobileNumber') Email
+                        input#mobileNumber.form-control(type='text', placeholder='Example@email.com', autocomplete='off')
                 fieldset.row 
                     .form-group
                         label(for='mobileNumber') Mobile Number
@@ -68,8 +75,8 @@ block content
                 fieldset.row.g-3
                     .form-group   
                         .form-floating
-                            input#userEmail.form-control(type='email', aria-describedby='emailHelp', placeholder='Example@email.com')
-                            label(for='userEmail') Email address
+                            input#userEmail.form-control(type='text', aria-describedby='usernameHelp', placeholder='Username' value=user.username)
+                            label(for='userEmail') Username
                                 
                         small#emailHelp.form-text.text-muted We&apos;ll never share your email with anyone else.
 
@@ -100,4 +107,4 @@ block content
                     li.list-group-item.list-group-item-primary.d-flex.justify-content-between.align-items-center
                         a(href='#') Barista
 
-    a.btn.btn-outline-danger.ms-auto(href='/') Sign Out
+    a.btn.btn-outline-danger.ms-auto(href='/auth/sign-out') Sign Out

@@ -1550,6 +1550,61 @@ function mergeAll(concurrent = Number.POSITIVE_INFINITY) {
   return mergeMap(identity, concurrent);
 }
 
+// node_modules/rxjs/_esm2015/internal/observable/forkJoin.js
+function forkJoin(...sources) {
+  if (sources.length === 1) {
+    const first2 = sources[0];
+    if (isArray(first2)) {
+      return forkJoinInternal(first2, null);
+    }
+    if (isObject(first2) && Object.getPrototypeOf(first2) === Object.prototype) {
+      const keys = Object.keys(first2);
+      return forkJoinInternal(keys.map((key) => first2[key]), keys);
+    }
+  }
+  if (typeof sources[sources.length - 1] === "function") {
+    const resultSelector = sources.pop();
+    sources = sources.length === 1 && isArray(sources[0]) ? sources[0] : sources;
+    return forkJoinInternal(sources, null).pipe(map((args) => resultSelector(...args)));
+  }
+  return forkJoinInternal(sources, null);
+}
+function forkJoinInternal(sources, keys) {
+  return new Observable((subscriber) => {
+    const len = sources.length;
+    if (len === 0) {
+      subscriber.complete();
+      return;
+    }
+    const values = new Array(len);
+    let completed = 0;
+    let emitted = 0;
+    for (let i = 0; i < len; i++) {
+      const source = from(sources[i]);
+      let hasValue = false;
+      subscriber.add(source.subscribe({
+        next: (value) => {
+          if (!hasValue) {
+            hasValue = true;
+            emitted++;
+          }
+          values[i] = value;
+        },
+        error: (err) => subscriber.error(err),
+        complete: () => {
+          completed++;
+          if (completed === len || !hasValue) {
+            if (emitted === len) {
+              subscriber.next(keys ? keys.reduce((result, key, i2) => (result[key] = values[i2], result), {}) : values);
+            }
+            subscriber.complete();
+          }
+        }
+      }));
+    }
+  });
+}
+
 // node_modules/rxjs/_esm2015/internal/observable/merge.js
 function merge(...observables) {
   let concurrent = Number.POSITIVE_INFINITY;
@@ -1805,6 +1860,13 @@ function getClosureSafeProperty(objWithPropertyToExtract) {
   }
   throw Error("Could not find renamed property on target object.");
 }
+function fillProperties(target, source) {
+  for (const key in source) {
+    if (source.hasOwnProperty(key) && !target.hasOwnProperty(key)) {
+      target[key] = source[key];
+    }
+  }
+}
 function stringify(token) {
   if (typeof token === "string") {
     return token;
@@ -1934,6 +1996,11 @@ function assertNumber(actual, msg) {
     throwError(msg, typeof actual, "number", "===");
   }
 }
+function assertNumberInRange(actual, minInclusive, maxInclusive) {
+  assertNumber(actual, "Expected a number");
+  assertLessThanOrEqual(actual, maxInclusive, "Expected number to be less than or equal to");
+  assertGreaterThanOrEqual(actual, minInclusive, "Expected number to be greater than or equal to");
+}
 function assertString(actual, msg) {
   if (!(typeof actual === "string")) {
     throwError(msg, actual === null ? "null" : typeof actual, "string", "===");
@@ -1967,6 +2034,11 @@ function assertNotSame(actual, expected, msg) {
 function assertLessThan(actual, expected, msg) {
   if (!(actual < expected)) {
     throwError(msg, actual, expected, "<");
+  }
+}
+function assertLessThanOrEqual(actual, expected, msg) {
+  if (!(actual <= expected)) {
+    throwError(msg, actual, expected, "<=");
   }
 }
 function assertGreaterThan(actual, expected, msg) {
@@ -3329,6 +3401,12 @@ function setBindingIndex(value) {
 function nextBindingIndex() {
   return instructionState.lFrame.bindingIndex++;
 }
+function incrementBindingIndex(count) {
+  const lFrame = instructionState.lFrame;
+  const index = lFrame.bindingIndex;
+  lFrame.bindingIndex = lFrame.bindingIndex + count;
+  return index;
+}
 function isInI18nBlock() {
   return instructionState.lFrame.inI18n;
 }
@@ -3342,6 +3420,10 @@ function getCurrentDirectiveIndex() {
 }
 function setCurrentDirectiveIndex(currentDirectiveIndex) {
   instructionState.lFrame.currentDirectiveIndex = currentDirectiveIndex;
+}
+function getCurrentDirectiveDef(tData) {
+  const currentDirectiveIndex = instructionState.lFrame.currentDirectiveIndex;
+  return currentDirectiveIndex === -1 ? null : tData[currentDirectiveIndex];
 }
 function setCurrentQueryIndex(value) {
   instructionState.lFrame.currentQueryIndex = value;
@@ -4174,6 +4256,63 @@ function newArray(size, value) {
     list.push(value);
   }
   return list;
+}
+function arrayInsert2(array, index, value1, value2) {
+  ngDevMode && assertLessThanOrEqual(index, array.length, "Can't insert past array end.");
+  let end = array.length;
+  if (end == index) {
+    array.push(value1, value2);
+  } else if (end === 1) {
+    array.push(value2, array[0]);
+    array[0] = value1;
+  } else {
+    end--;
+    array.push(array[end - 1], array[end]);
+    while (end > index) {
+      const previousEnd = end - 2;
+      array[end] = array[previousEnd];
+      end--;
+    }
+    array[index] = value1;
+    array[index + 1] = value2;
+  }
+}
+function keyValueArraySet(keyValueArray, key, value) {
+  let index = keyValueArrayIndexOf(keyValueArray, key);
+  if (index >= 0) {
+    keyValueArray[index | 1] = value;
+  } else {
+    index = ~index;
+    arrayInsert2(keyValueArray, index, key, value);
+  }
+  return index;
+}
+function keyValueArrayGet(keyValueArray, key) {
+  const index = keyValueArrayIndexOf(keyValueArray, key);
+  if (index >= 0) {
+    return keyValueArray[index | 1];
+  }
+  return void 0;
+}
+function keyValueArrayIndexOf(keyValueArray, key) {
+  return _arrayIndexOfSorted(keyValueArray, key, 1);
+}
+function _arrayIndexOfSorted(array, value, shift) {
+  ngDevMode && assertEqual(Array.isArray(array), true, "Expecting an array");
+  let start = 0;
+  let end = array.length >> shift;
+  while (end !== start) {
+    const middle = start + (end - start >> 1);
+    const current = array[middle << shift];
+    if (value === current) {
+      return middle << shift;
+    } else if (current > value) {
+      end = middle;
+    } else {
+      start = middle + 1;
+    }
+  }
+  return ~(end << shift);
 }
 var Optional = (
   // Disable tslint because `InternalInjectFlags` is a const enum which gets inlined.
@@ -5765,6 +5904,31 @@ function applyContainer(renderer, action, lContainer, parentRElement, beforeNode
   for (let i = CONTAINER_HEADER_OFFSET; i < lContainer.length; i++) {
     const lView = lContainer[i];
     applyView(lView[TVIEW], lView, renderer, action, parentRElement, anchor);
+  }
+}
+function applyStyling(renderer, isClassBased, rNode, prop, value) {
+  if (isClassBased) {
+    if (!value) {
+      ngDevMode && ngDevMode.rendererRemoveClass++;
+      renderer.removeClass(rNode, prop);
+    } else {
+      ngDevMode && ngDevMode.rendererAddClass++;
+      renderer.addClass(rNode, prop);
+    }
+  } else {
+    let flags = prop.indexOf("-") === -1 ? void 0 : RendererStyleFlags2.DashCase;
+    if (value == null) {
+      ngDevMode && ngDevMode.rendererRemoveStyle++;
+      renderer.removeStyle(rNode, prop, flags);
+    } else {
+      const isImportant = typeof value === "string" ? value.endsWith("!important") : false;
+      if (isImportant) {
+        value = value.slice(0, -10);
+        flags |= RendererStyleFlags2.Important;
+      }
+      ngDevMode && ngDevMode.rendererSetStyle++;
+      renderer.setStyle(rNode, prop, value, flags);
+    }
   }
 }
 function writeDirectStyle(renderer, element, newValue) {
@@ -8952,6 +9116,119 @@ function LifecycleHooksFeature() {
   ngDevMode && assertDefined(tNode, "TNode is required");
   registerPostOrderHooks(getLView()[TVIEW], tNode);
 }
+function getSuperType(type) {
+  return Object.getPrototypeOf(type.prototype).constructor;
+}
+function \u0275\u0275InheritDefinitionFeature(definition) {
+  let superType = getSuperType(definition.type);
+  let shouldInheritFields = true;
+  const inheritanceChain = [definition];
+  while (superType) {
+    let superDef = void 0;
+    if (isComponentDef(definition)) {
+      superDef = superType.\u0275cmp || superType.\u0275dir;
+    } else {
+      if (superType.\u0275cmp) {
+        throw new RuntimeError(903, ngDevMode && `Directives cannot inherit Components. Directive ${stringifyForError(definition.type)} is attempting to extend component ${stringifyForError(superType)}`);
+      }
+      superDef = superType.\u0275dir;
+    }
+    if (superDef) {
+      if (shouldInheritFields) {
+        inheritanceChain.push(superDef);
+        const writeableDef = definition;
+        writeableDef.inputs = maybeUnwrapEmpty(definition.inputs);
+        writeableDef.inputTransforms = maybeUnwrapEmpty(definition.inputTransforms);
+        writeableDef.declaredInputs = maybeUnwrapEmpty(definition.declaredInputs);
+        writeableDef.outputs = maybeUnwrapEmpty(definition.outputs);
+        const superHostBindings = superDef.hostBindings;
+        superHostBindings && inheritHostBindings(definition, superHostBindings);
+        const superViewQuery = superDef.viewQuery;
+        const superContentQueries = superDef.contentQueries;
+        superViewQuery && inheritViewQuery(definition, superViewQuery);
+        superContentQueries && inheritContentQueries(definition, superContentQueries);
+        fillProperties(definition.inputs, superDef.inputs);
+        fillProperties(definition.declaredInputs, superDef.declaredInputs);
+        fillProperties(definition.outputs, superDef.outputs);
+        if (superDef.inputTransforms !== null) {
+          if (writeableDef.inputTransforms === null) {
+            writeableDef.inputTransforms = {};
+          }
+          fillProperties(writeableDef.inputTransforms, superDef.inputTransforms);
+        }
+        if (isComponentDef(superDef) && superDef.data.animation) {
+          const defData = definition.data;
+          defData.animation = (defData.animation || []).concat(superDef.data.animation);
+        }
+      }
+      const features = superDef.features;
+      if (features) {
+        for (let i = 0; i < features.length; i++) {
+          const feature = features[i];
+          if (feature && feature.ngInherit) {
+            feature(definition);
+          }
+          if (feature === \u0275\u0275InheritDefinitionFeature) {
+            shouldInheritFields = false;
+          }
+        }
+      }
+    }
+    superType = Object.getPrototypeOf(superType);
+  }
+  mergeHostAttrsAcrossInheritance(inheritanceChain);
+}
+function mergeHostAttrsAcrossInheritance(inheritanceChain) {
+  let hostVars = 0;
+  let hostAttrs = null;
+  for (let i = inheritanceChain.length - 1; i >= 0; i--) {
+    const def = inheritanceChain[i];
+    def.hostVars = hostVars += def.hostVars;
+    def.hostAttrs = mergeHostAttrs(def.hostAttrs, hostAttrs = mergeHostAttrs(hostAttrs, def.hostAttrs));
+  }
+}
+function maybeUnwrapEmpty(value) {
+  if (value === EMPTY_OBJ) {
+    return {};
+  } else if (value === EMPTY_ARRAY) {
+    return [];
+  } else {
+    return value;
+  }
+}
+function inheritViewQuery(definition, superViewQuery) {
+  const prevViewQuery = definition.viewQuery;
+  if (prevViewQuery) {
+    definition.viewQuery = (rf, ctx) => {
+      superViewQuery(rf, ctx);
+      prevViewQuery(rf, ctx);
+    };
+  } else {
+    definition.viewQuery = superViewQuery;
+  }
+}
+function inheritContentQueries(definition, superContentQueries) {
+  const prevContentQueries = definition.contentQueries;
+  if (prevContentQueries) {
+    definition.contentQueries = (rf, ctx, directiveIndex) => {
+      superContentQueries(rf, ctx, directiveIndex);
+      prevContentQueries(rf, ctx, directiveIndex);
+    };
+  } else {
+    definition.contentQueries = superContentQueries;
+  }
+}
+function inheritHostBindings(definition, superHostBindings) {
+  const prevHostBindings = definition.hostBindings;
+  if (prevHostBindings) {
+    definition.hostBindings = (rf, ctx) => {
+      superHostBindings(rf, ctx);
+      prevHostBindings(rf, ctx);
+    };
+  } else {
+    definition.hostBindings = superHostBindings;
+  }
+}
 function updateBinding(lView, bindingIndex, value) {
   return lView[bindingIndex] = value;
 }
@@ -8982,6 +9259,160 @@ function interpolation1(lView, prefix, v0, suffix) {
   const different = bindingUpdated(lView, nextBindingIndex(), v0);
   return different ? prefix + renderStringify(v0) + suffix : NO_CHANGE;
 }
+function toTStylingRange(prev, next) {
+  ngDevMode && assertNumberInRange(
+    prev,
+    0,
+    32767
+    /* StylingRange.UNSIGNED_MASK */
+  );
+  ngDevMode && assertNumberInRange(
+    next,
+    0,
+    32767
+    /* StylingRange.UNSIGNED_MASK */
+  );
+  return prev << 17 | next << 2;
+}
+function getTStylingRangePrev(tStylingRange) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  return tStylingRange >> 17 & 32767;
+}
+function getTStylingRangePrevDuplicate(tStylingRange) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  return (tStylingRange & 2) == 2;
+}
+function setTStylingRangePrev(tStylingRange, previous) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  ngDevMode && assertNumberInRange(
+    previous,
+    0,
+    32767
+    /* StylingRange.UNSIGNED_MASK */
+  );
+  return tStylingRange & ~4294836224 | previous << 17;
+}
+function setTStylingRangePrevDuplicate(tStylingRange) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  return tStylingRange | 2;
+}
+function getTStylingRangeNext(tStylingRange) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  return (tStylingRange & 131068) >> 2;
+}
+function setTStylingRangeNext(tStylingRange, next) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  ngDevMode && assertNumberInRange(
+    next,
+    0,
+    32767
+    /* StylingRange.UNSIGNED_MASK */
+  );
+  return tStylingRange & ~131068 | //
+  next << 2;
+}
+function getTStylingRangeNextDuplicate(tStylingRange) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  return (tStylingRange & 1) === 1;
+}
+function setTStylingRangeNextDuplicate(tStylingRange) {
+  ngDevMode && assertNumber(tStylingRange, "expected number");
+  return tStylingRange | 1;
+}
+function insertTStylingBinding(tData, tNode, tStylingKeyWithStatic, index, isHostBinding, isClassBinding) {
+  ngDevMode && assertFirstUpdatePass(getTView());
+  let tBindings = isClassBinding ? tNode.classBindings : tNode.styleBindings;
+  let tmplHead = getTStylingRangePrev(tBindings);
+  let tmplTail = getTStylingRangeNext(tBindings);
+  tData[index] = tStylingKeyWithStatic;
+  let isKeyDuplicateOfStatic = false;
+  let tStylingKey;
+  if (Array.isArray(tStylingKeyWithStatic)) {
+    const staticKeyValueArray = tStylingKeyWithStatic;
+    tStylingKey = staticKeyValueArray[1];
+    if (tStylingKey === null || keyValueArrayIndexOf(staticKeyValueArray, tStylingKey) > 0) {
+      isKeyDuplicateOfStatic = true;
+    }
+  } else {
+    tStylingKey = tStylingKeyWithStatic;
+  }
+  if (isHostBinding) {
+    const hasTemplateBindings = tmplTail !== 0;
+    if (hasTemplateBindings) {
+      const previousNode = getTStylingRangePrev(tData[tmplHead + 1]);
+      tData[index + 1] = toTStylingRange(previousNode, tmplHead);
+      if (previousNode !== 0) {
+        tData[previousNode + 1] = setTStylingRangeNext(tData[previousNode + 1], index);
+      }
+      tData[tmplHead + 1] = setTStylingRangePrev(tData[tmplHead + 1], index);
+    } else {
+      tData[index + 1] = toTStylingRange(tmplHead, 0);
+      if (tmplHead !== 0) {
+        tData[tmplHead + 1] = setTStylingRangeNext(tData[tmplHead + 1], index);
+      }
+      tmplHead = index;
+    }
+  } else {
+    tData[index + 1] = toTStylingRange(tmplTail, 0);
+    ngDevMode && assertEqual(tmplHead !== 0 && tmplTail === 0, false, "Adding template bindings after hostBindings is not allowed.");
+    if (tmplHead === 0) {
+      tmplHead = index;
+    } else {
+      tData[tmplTail + 1] = setTStylingRangeNext(tData[tmplTail + 1], index);
+    }
+    tmplTail = index;
+  }
+  if (isKeyDuplicateOfStatic) {
+    tData[index + 1] = setTStylingRangePrevDuplicate(tData[index + 1]);
+  }
+  markDuplicates(tData, tStylingKey, index, true, isClassBinding);
+  markDuplicates(tData, tStylingKey, index, false, isClassBinding);
+  markDuplicateOfResidualStyling(tNode, tStylingKey, tData, index, isClassBinding);
+  tBindings = toTStylingRange(tmplHead, tmplTail);
+  if (isClassBinding) {
+    tNode.classBindings = tBindings;
+  } else {
+    tNode.styleBindings = tBindings;
+  }
+}
+function markDuplicateOfResidualStyling(tNode, tStylingKey, tData, index, isClassBinding) {
+  const residual = isClassBinding ? tNode.residualClasses : tNode.residualStyles;
+  if (residual != null && typeof tStylingKey == "string" && keyValueArrayIndexOf(residual, tStylingKey) >= 0) {
+    tData[index + 1] = setTStylingRangeNextDuplicate(tData[index + 1]);
+  }
+}
+function markDuplicates(tData, tStylingKey, index, isPrevDir, isClassBinding) {
+  const tStylingAtIndex = tData[index + 1];
+  const isMap = tStylingKey === null;
+  let cursor = isPrevDir ? getTStylingRangePrev(tStylingAtIndex) : getTStylingRangeNext(tStylingAtIndex);
+  let foundDuplicate = false;
+  while (cursor !== 0 && (foundDuplicate === false || isMap)) {
+    ngDevMode && assertIndexInRange(tData, cursor);
+    const tStylingValueAtCursor = tData[cursor];
+    const tStyleRangeAtCursor = tData[cursor + 1];
+    if (isStylingMatch(tStylingValueAtCursor, tStylingKey)) {
+      foundDuplicate = true;
+      tData[cursor + 1] = isPrevDir ? setTStylingRangeNextDuplicate(tStyleRangeAtCursor) : setTStylingRangePrevDuplicate(tStyleRangeAtCursor);
+    }
+    cursor = isPrevDir ? getTStylingRangePrev(tStyleRangeAtCursor) : getTStylingRangeNext(tStyleRangeAtCursor);
+  }
+  if (foundDuplicate) {
+    tData[index + 1] = isPrevDir ? setTStylingRangePrevDuplicate(tStylingAtIndex) : setTStylingRangeNextDuplicate(tStylingAtIndex);
+  }
+}
+function isStylingMatch(tStylingKeyCursor, tStylingKey) {
+  ngDevMode && assertNotEqual(Array.isArray(tStylingKey), true, "Expected that 'tStylingKey' has been unwrapped");
+  if (tStylingKeyCursor === null || // If the cursor is `null` it means that we have map at that
+  // location so we must assume that we have a match.
+  tStylingKey == null || // If `tStylingKey` is `null` then it is a map therefor assume that it
+  // contains a match.
+  (Array.isArray(tStylingKeyCursor) ? tStylingKeyCursor[1] : tStylingKeyCursor) === tStylingKey) {
+    return true;
+  } else if (Array.isArray(tStylingKeyCursor) && typeof tStylingKey === "string") {
+    return keyValueArrayIndexOf(tStylingKeyCursor, tStylingKey) >= 0;
+  }
+  return false;
+}
 function \u0275\u0275property(propName, value, sanitizer) {
   const lView = getLView();
   const bindingIndex = nextBindingIndex();
@@ -8997,6 +9428,200 @@ function setDirectiveInputsWhichShadowsStyling(tView, tNode, lView, value, isCla
   const inputs = tNode.inputs;
   const property = isClassBased ? "class" : "style";
   setInputsForProperty(tView, lView, inputs[property], property, value);
+}
+function \u0275\u0275classProp(className, value) {
+  checkStylingProperty(className, value, null, true);
+  return \u0275\u0275classProp;
+}
+function checkStylingProperty(prop, value, suffix, isClassBased) {
+  const lView = getLView();
+  const tView = getTView();
+  const bindingIndex = incrementBindingIndex(2);
+  if (tView.firstUpdatePass) {
+    stylingFirstUpdatePass(tView, prop, bindingIndex, isClassBased);
+  }
+  if (value !== NO_CHANGE && bindingUpdated(lView, bindingIndex, value)) {
+    const tNode = tView.data[getSelectedIndex()];
+    updateStyling(tView, tNode, lView, lView[RENDERER], prop, lView[bindingIndex + 1] = normalizeSuffix(value, suffix), isClassBased, bindingIndex);
+  }
+}
+function isInHostBindings(tView, bindingIndex) {
+  return bindingIndex >= tView.expandoStartIndex;
+}
+function stylingFirstUpdatePass(tView, tStylingKey, bindingIndex, isClassBased) {
+  ngDevMode && assertFirstUpdatePass(tView);
+  const tData = tView.data;
+  if (tData[bindingIndex + 1] === null) {
+    const tNode = tData[getSelectedIndex()];
+    ngDevMode && assertDefined(tNode, "TNode expected");
+    const isHostBindings = isInHostBindings(tView, bindingIndex);
+    if (hasStylingInputShadow(tNode, isClassBased) && tStylingKey === null && !isHostBindings) {
+      tStylingKey = false;
+    }
+    tStylingKey = wrapInStaticStylingKey(tData, tNode, tStylingKey, isClassBased);
+    insertTStylingBinding(tData, tNode, tStylingKey, bindingIndex, isHostBindings, isClassBased);
+  }
+}
+function wrapInStaticStylingKey(tData, tNode, stylingKey, isClassBased) {
+  const hostDirectiveDef = getCurrentDirectiveDef(tData);
+  let residual = isClassBased ? tNode.residualClasses : tNode.residualStyles;
+  if (hostDirectiveDef === null) {
+    const isFirstStylingInstructionInTemplate = (isClassBased ? tNode.classBindings : tNode.styleBindings) === 0;
+    if (isFirstStylingInstructionInTemplate) {
+      stylingKey = collectStylingFromDirectives(null, tData, tNode, stylingKey, isClassBased);
+      stylingKey = collectStylingFromTAttrs(stylingKey, tNode.attrs, isClassBased);
+      residual = null;
+    }
+  } else {
+    const directiveStylingLast = tNode.directiveStylingLast;
+    const isFirstStylingInstructionInHostBinding = directiveStylingLast === -1 || tData[directiveStylingLast] !== hostDirectiveDef;
+    if (isFirstStylingInstructionInHostBinding) {
+      stylingKey = collectStylingFromDirectives(hostDirectiveDef, tData, tNode, stylingKey, isClassBased);
+      if (residual === null) {
+        let templateStylingKey = getTemplateHeadTStylingKey(tData, tNode, isClassBased);
+        if (templateStylingKey !== void 0 && Array.isArray(templateStylingKey)) {
+          templateStylingKey = collectStylingFromDirectives(null, tData, tNode, templateStylingKey[1], isClassBased);
+          templateStylingKey = collectStylingFromTAttrs(templateStylingKey, tNode.attrs, isClassBased);
+          setTemplateHeadTStylingKey(tData, tNode, isClassBased, templateStylingKey);
+        }
+      } else {
+        residual = collectResidual(tData, tNode, isClassBased);
+      }
+    }
+  }
+  if (residual !== void 0) {
+    isClassBased ? tNode.residualClasses = residual : tNode.residualStyles = residual;
+  }
+  return stylingKey;
+}
+function getTemplateHeadTStylingKey(tData, tNode, isClassBased) {
+  const bindings = isClassBased ? tNode.classBindings : tNode.styleBindings;
+  if (getTStylingRangeNext(bindings) === 0) {
+    return void 0;
+  }
+  return tData[getTStylingRangePrev(bindings)];
+}
+function setTemplateHeadTStylingKey(tData, tNode, isClassBased, tStylingKey) {
+  const bindings = isClassBased ? tNode.classBindings : tNode.styleBindings;
+  ngDevMode && assertNotEqual(getTStylingRangeNext(bindings), 0, "Expecting to have at least one template styling binding.");
+  tData[getTStylingRangePrev(bindings)] = tStylingKey;
+}
+function collectResidual(tData, tNode, isClassBased) {
+  let residual = void 0;
+  const directiveEnd = tNode.directiveEnd;
+  ngDevMode && assertNotEqual(tNode.directiveStylingLast, -1, "By the time this function gets called at least one hostBindings-node styling instruction must have executed.");
+  for (let i = 1 + tNode.directiveStylingLast; i < directiveEnd; i++) {
+    const attrs = tData[i].hostAttrs;
+    residual = collectStylingFromTAttrs(residual, attrs, isClassBased);
+  }
+  return collectStylingFromTAttrs(residual, tNode.attrs, isClassBased);
+}
+function collectStylingFromDirectives(hostDirectiveDef, tData, tNode, stylingKey, isClassBased) {
+  let currentDirective = null;
+  const directiveEnd = tNode.directiveEnd;
+  let directiveStylingLast = tNode.directiveStylingLast;
+  if (directiveStylingLast === -1) {
+    directiveStylingLast = tNode.directiveStart;
+  } else {
+    directiveStylingLast++;
+  }
+  while (directiveStylingLast < directiveEnd) {
+    currentDirective = tData[directiveStylingLast];
+    ngDevMode && assertDefined(currentDirective, "expected to be defined");
+    stylingKey = collectStylingFromTAttrs(stylingKey, currentDirective.hostAttrs, isClassBased);
+    if (currentDirective === hostDirectiveDef)
+      break;
+    directiveStylingLast++;
+  }
+  if (hostDirectiveDef !== null) {
+    tNode.directiveStylingLast = directiveStylingLast;
+  }
+  return stylingKey;
+}
+function collectStylingFromTAttrs(stylingKey, attrs, isClassBased) {
+  const desiredMarker = isClassBased ? 1 : 2;
+  let currentMarker = -1;
+  if (attrs !== null) {
+    for (let i = 0; i < attrs.length; i++) {
+      const item = attrs[i];
+      if (typeof item === "number") {
+        currentMarker = item;
+      } else {
+        if (currentMarker === desiredMarker) {
+          if (!Array.isArray(stylingKey)) {
+            stylingKey = stylingKey === void 0 ? [] : ["", stylingKey];
+          }
+          keyValueArraySet(stylingKey, item, isClassBased ? true : attrs[++i]);
+        }
+      }
+    }
+  }
+  return stylingKey === void 0 ? null : stylingKey;
+}
+function updateStyling(tView, tNode, lView, renderer, prop, value, isClassBased, bindingIndex) {
+  if (!(tNode.type & 3)) {
+    return;
+  }
+  const tData = tView.data;
+  const tRange = tData[bindingIndex + 1];
+  const higherPriorityValue = getTStylingRangeNextDuplicate(tRange) ? findStylingValue(tData, tNode, lView, prop, getTStylingRangeNext(tRange), isClassBased) : void 0;
+  if (!isStylingValuePresent(higherPriorityValue)) {
+    if (!isStylingValuePresent(value)) {
+      if (getTStylingRangePrevDuplicate(tRange)) {
+        value = findStylingValue(tData, null, lView, prop, bindingIndex, isClassBased);
+      }
+    }
+    const rNode = getNativeByIndex(getSelectedIndex(), lView);
+    applyStyling(renderer, isClassBased, rNode, prop, value);
+  }
+}
+function findStylingValue(tData, tNode, lView, prop, index, isClassBased) {
+  const isPrevDirection = tNode === null;
+  let value = void 0;
+  while (index > 0) {
+    const rawKey = tData[index];
+    const containsStatics = Array.isArray(rawKey);
+    const key = containsStatics ? rawKey[1] : rawKey;
+    const isStylingMap = key === null;
+    let valueAtLViewIndex = lView[index + 1];
+    if (valueAtLViewIndex === NO_CHANGE) {
+      valueAtLViewIndex = isStylingMap ? EMPTY_ARRAY : void 0;
+    }
+    let currentValue = isStylingMap ? keyValueArrayGet(valueAtLViewIndex, prop) : key === prop ? valueAtLViewIndex : void 0;
+    if (containsStatics && !isStylingValuePresent(currentValue)) {
+      currentValue = keyValueArrayGet(rawKey, prop);
+    }
+    if (isStylingValuePresent(currentValue)) {
+      value = currentValue;
+      if (isPrevDirection) {
+        return value;
+      }
+    }
+    const tRange = tData[index + 1];
+    index = isPrevDirection ? getTStylingRangePrev(tRange) : getTStylingRangeNext(tRange);
+  }
+  if (tNode !== null) {
+    let residual = isClassBased ? tNode.residualClasses : tNode.residualStyles;
+    if (residual != null) {
+      value = keyValueArrayGet(residual, prop);
+    }
+  }
+  return value;
+}
+function isStylingValuePresent(value) {
+  return value !== void 0;
+}
+function normalizeSuffix(value, suffix) {
+  if (value == null || value === "") {
+  } else if (typeof suffix === "string") {
+    value = value + suffix;
+  } else if (typeof value === "object") {
+    value = stringify(unwrapSafeValue(value));
+  }
+  return value;
+}
+function hasStylingInputShadow(tNode, isClassBased) {
+  return (tNode.flags & (isClassBased ? 8 : 16)) !== 0;
 }
 var REF_EXTRACTOR_REGEXP = /* @__PURE__ */ new RegExp(`^(\\d+)*(${REFERENCE_NODE_BODY}|${REFERENCE_NODE_HOST})*(.*)`);
 var _findMatchingDehydratedViewImpl = (lContainer, template) => null;
@@ -15079,9 +15704,9 @@ var ApiDataService = /* @__PURE__ */ (() => {
 })();
 
 // src/app/job-list/job-list.component.ts
-function JobListComponent_div_4_span_20_Template(rf, ctx) {
+function JobListComponent_div_0_span_27_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275elementStart(0, "span", 21);
+    \u0275\u0275elementStart(0, "span", 23);
     \u0275\u0275text(1);
     \u0275\u0275elementEnd();
   }
@@ -15091,9 +15716,9 @@ function JobListComponent_div_4_span_20_Template(rf, ctx) {
     \u0275\u0275textInterpolate1("", day_r4, " ");
   }
 }
-function JobListComponent_div_4_span_28_Template(rf, ctx) {
+function JobListComponent_div_0_span_29_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275elementStart(0, "span", 22);
+    \u0275\u0275elementStart(0, "span", 24);
     \u0275\u0275text(1);
     \u0275\u0275elementEnd();
   }
@@ -15103,19 +15728,19 @@ function JobListComponent_div_4_span_28_Template(rf, ctx) {
     \u0275\u0275textInterpolate1("", tag_r5, " ");
   }
 }
-function JobListComponent_div_4_Template(rf, ctx) {
+function JobListComponent_div_0_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275elementStart(0, "div", 3)(1, "div", 4)(2, "a", 5)(3, "h4");
-    \u0275\u0275text(4);
+    \u0275\u0275elementStart(0, "div", 1)(1, "div", 2)(2, "div", 3)(3, "h2")(4, "a", 4);
+    \u0275\u0275text(5);
     \u0275\u0275elementEnd()();
-    \u0275\u0275elementStart(5, "div", 6)(6, "p");
+    \u0275\u0275elementStart(6, "span", 5);
     \u0275\u0275text(7);
+    \u0275\u0275pipe(8, "date");
     \u0275\u0275elementEnd()();
-    \u0275\u0275elementStart(8, "div", 7)(9, "p");
+    \u0275\u0275elementStart(9, "h6", 6);
     \u0275\u0275text(10);
-    \u0275\u0275pipe(11, "date");
-    \u0275\u0275elementEnd()()();
-    \u0275\u0275elementStart(12, "div", 8)(13, "div", 9);
+    \u0275\u0275elementEnd()();
+    \u0275\u0275elementStart(11, "div", 7)(12, "div", 8)(13, "div", 9);
     \u0275\u0275namespaceSVG();
     \u0275\u0275elementStart(14, "svg", 10);
     \u0275\u0275element(15, "rect", 11);
@@ -15123,43 +15748,43 @@ function JobListComponent_div_4_Template(rf, ctx) {
     \u0275\u0275text(17, "Image cap");
     \u0275\u0275elementEnd()()();
     \u0275\u0275namespaceHTML();
-    \u0275\u0275elementStart(18, "div", 13)(19, "div", 14);
-    \u0275\u0275template(20, JobListComponent_div_4_span_20_Template, 2, 1, "span", 15);
+    \u0275\u0275elementStart(18, "div", 13)(19, "p", 14);
+    \u0275\u0275text(20);
     \u0275\u0275elementEnd();
-    \u0275\u0275elementStart(21, "p", 16);
+    \u0275\u0275elementStart(21, "p", 15);
     \u0275\u0275text(22);
     \u0275\u0275elementEnd();
-    \u0275\u0275elementStart(23, "p", 16);
+    \u0275\u0275elementStart(23, "p", 15);
     \u0275\u0275text(24);
     \u0275\u0275elementEnd();
-    \u0275\u0275elementStart(25, "p", 16);
-    \u0275\u0275text(26);
+    \u0275\u0275elementStart(25, "div", 16)(26, "div", 17);
+    \u0275\u0275template(27, JobListComponent_div_0_span_27_Template, 2, 1, "span", 18);
     \u0275\u0275elementEnd();
-    \u0275\u0275elementStart(27, "div", 17);
-    \u0275\u0275template(28, JobListComponent_div_4_span_28_Template, 2, 1, "span", 18);
-    \u0275\u0275elementEnd()();
-    \u0275\u0275elementStart(29, "div", 19)(30, "a", 20);
-    \u0275\u0275text(31, "Quick Apply");
-    \u0275\u0275elementEnd()()()();
+    \u0275\u0275elementStart(28, "div", 19);
+    \u0275\u0275template(29, JobListComponent_div_0_span_29_Template, 2, 1, "span", 20);
+    \u0275\u0275elementEnd()()();
+    \u0275\u0275elementStart(30, "div", 21)(31, "button", 22);
+    \u0275\u0275text(32, " Quick Apply ");
+    \u0275\u0275elementEnd()()()()();
   }
   if (rf & 2) {
     const job_r1 = ctx.$implicit;
-    \u0275\u0275advance(2);
+    \u0275\u0275advance(4);
     \u0275\u0275propertyInterpolate1("href", "/jobs/", job_r1._id, "", \u0275\u0275sanitizeUrl);
+    \u0275\u0275advance(1);
+    \u0275\u0275textInterpolate1(" ", job_r1.title, " ");
     \u0275\u0275advance(2);
-    \u0275\u0275textInterpolate(job_r1.title);
+    \u0275\u0275textInterpolate1(" ", \u0275\u0275pipeBind2(8, 9, job_r1.dateCreated, "yyyy-MM-dd"), " ");
     \u0275\u0275advance(3);
     \u0275\u0275textInterpolate(job_r1.address);
-    \u0275\u0275advance(3);
-    \u0275\u0275textInterpolate(\u0275\u0275pipeBind2(11, 9, job_r1.dateCreated, "yyyy-MM-dd"));
     \u0275\u0275advance(10);
-    \u0275\u0275property("ngForOf", job_r1.schedule);
-    \u0275\u0275advance(2);
     \u0275\u0275textInterpolate1(" ", job_r1.description, " ");
     \u0275\u0275advance(2);
-    \u0275\u0275textInterpolate1("Hourly Rate: ", job_r1.hourlyRate, "");
+    \u0275\u0275textInterpolate1("Hourly Rate: \u20AC ", job_r1.hourlyRate, "");
     \u0275\u0275advance(2);
     \u0275\u0275textInterpolate1("Weekly Hours: ", job_r1.weeklyHours, "");
+    \u0275\u0275advance(3);
+    \u0275\u0275property("ngForOf", job_r1.schedule);
     \u0275\u0275advance(2);
     \u0275\u0275property("ngForOf", job_r1.tags);
   }
@@ -15168,7 +15793,6 @@ var JobListComponent = /* @__PURE__ */ (() => {
   const _JobListComponent = class _JobListComponent {
     constructor(apiDataService) {
       this.apiDataService = apiDataService;
-      this.header = "All Jobs";
       this.jobs = [];
     }
     getJobs() {
@@ -15187,21 +15811,14 @@ var JobListComponent = /* @__PURE__ */ (() => {
     type: _JobListComponent,
     selectors: [["app-job-list"]],
     features: [\u0275\u0275ProvidersFeature([ApiDataService])],
-    decls: 5,
-    vars: 2,
-    consts: [[1, "m-5"], [1, "row", "gap-3"], ["class", "card px-0", 4, "ngFor", "ngForOf"], [1, "card", "px-0"], [1, "card-header", "d-flex", "gap-3"], [3, "href"], [1, "d-inline-flex"], [1, "text-muted", "ms-auto"], [1, "row", "g-0"], [1, "col-md-4"], ["xmlns", "http://www.w3.org/2000/svg", "width", "100%", "height", "100%", "aria-label", "Placeholder: Image cap", "focusable", "false", "role", "img", "preserveAspectRatio", "xMidYMid slice", "viewBox", "0 0 318 180", 1, "d-block", "user-select-none", 2, "font-size", "1.125rem", "text-anchor", "middle"], ["width", "100%", "height", "100%", "fill", "#868e96"], ["x", "50%", "y", "50%", "fill", "#dee2e6", "dy", ".3em"], [1, "card-body", "col-md-6"], [1, "schedule"], ["class", "badge rounded-pill bg-info mx-1", 4, "ngFor", "ngForOf"], [1, "card-text"], [1, "tags"], ["class", "badge rounded-pill bg-light mx-1", 4, "ngFor", "ngForOf"], [1, "card-body", "container", "col-md-2", "text-center"], ["href", "/", 1, "btn", "btn-outline-primary", "align-bottom"], [1, "badge", "rounded-pill", "bg-info", "mx-1"], [1, "badge", "rounded-pill", "bg-light", "mx-1"]],
+    decls: 1,
+    vars: 1,
+    consts: [["class", "card m-3", 4, "ngFor", "ngForOf"], [1, "card", "m-3"], [1, "card-header"], [1, "d-flex"], [2, "text-decoration", "none", 3, "href"], [1, "text-muted", "ms-auto"], [1, "m-0"], [1, "card-body"], [1, "row"], [1, "col-md-4"], ["xmlns", "http://www.w3.org/2000/svg", "width", "100%", "height", "100%", "aria-label", "Placeholder: Image cap", "focusable", "false", "role", "img", "preserveAspectRatio", "xMidYMid slice", "viewBox", "0 0 318 180", 1, "d-block", "user-select-none", 2, "font-size", "1.125rem", "text-anchor", "middle"], ["width", "100%", "height", "100%", "fill", "#868e96"], ["x", "50%", "y", "50%", "fill", "#dee2e6", "dy", ".3em"], [1, "col-md-6"], [1, "card-text"], [1, "fw-bold"], ["id", "badges", 1, "mt-auto", "row", "gap-2"], ["id", "schedule"], ["class", "badge rounded-pill bg-info mx-1", 4, "ngFor", "ngForOf"], ["id", "tags"], ["class", "badge rounded-pill bg-primary mx-1", 4, "ngFor", "ngForOf"], [1, "col-md-2", "d-flex"], ["href", "#", 1, "btn", "btn-outline-primary", "ms-auto", "mt-auto"], [1, "badge", "rounded-pill", "bg-info", "mx-1"], [1, "badge", "rounded-pill", "bg-primary", "mx-1"]],
     template: function JobListComponent_Template(rf, ctx) {
       if (rf & 1) {
-        \u0275\u0275elementStart(0, "div", 0)(1, "div", 1)(2, "h1");
-        \u0275\u0275text(3);
-        \u0275\u0275elementEnd();
-        \u0275\u0275template(4, JobListComponent_div_4_Template, 32, 12, "div", 2);
-        \u0275\u0275elementEnd()();
+        \u0275\u0275template(0, JobListComponent_div_0_Template, 33, 12, "div", 0);
       }
       if (rf & 2) {
-        \u0275\u0275advance(3);
-        \u0275\u0275textInterpolate(ctx.header);
-        \u0275\u0275advance(1);
         \u0275\u0275property("ngForOf", ctx.jobs);
       }
     },
@@ -15209,6 +15826,577 @@ var JobListComponent = /* @__PURE__ */ (() => {
   });
   let JobListComponent2 = _JobListComponent;
   return JobListComponent2;
+})();
+
+// node_modules/@angular/forms/fesm2022/forms.mjs
+function isPresent(o) {
+  return o != null;
+}
+function toObservable(value) {
+  const obs = isPromise2(value) ? from(value) : value;
+  if ((typeof ngDevMode === "undefined" || ngDevMode) && !isSubscribable(obs)) {
+    let errorMessage = `Expected async validator to return Promise or Observable.`;
+    if (typeof value === "object") {
+      errorMessage += " Are you using a synchronous validator where an async validator is expected?";
+    }
+    throw new RuntimeError(-1101, errorMessage);
+  }
+  return obs;
+}
+function mergeErrors(arrayOfErrors) {
+  let res = {};
+  arrayOfErrors.forEach((errors) => {
+    res = errors != null ? __spreadValues(__spreadValues({}, res), errors) : res;
+  });
+  return Object.keys(res).length === 0 ? null : res;
+}
+function executeValidators(control, validators) {
+  return validators.map((validator) => validator(control));
+}
+function isValidatorFn(validator) {
+  return !validator.validate;
+}
+function normalizeValidators(validators) {
+  return validators.map((validator) => {
+    return isValidatorFn(validator) ? validator : (c) => validator.validate(c);
+  });
+}
+function compose(validators) {
+  if (!validators)
+    return null;
+  const presentValidators = validators.filter(isPresent);
+  if (presentValidators.length == 0)
+    return null;
+  return function(control) {
+    return mergeErrors(executeValidators(control, presentValidators));
+  };
+}
+function composeValidators(validators) {
+  return validators != null ? compose(normalizeValidators(validators)) : null;
+}
+function composeAsync(validators) {
+  if (!validators)
+    return null;
+  const presentValidators = validators.filter(isPresent);
+  if (presentValidators.length == 0)
+    return null;
+  return function(control) {
+    const observables = executeValidators(control, presentValidators).map(toObservable);
+    return forkJoin(observables).pipe(map(mergeErrors));
+  };
+}
+function composeAsyncValidators(validators) {
+  return validators != null ? composeAsync(normalizeValidators(validators)) : null;
+}
+var AbstractControlDirective = class {
+  constructor() {
+    this._rawValidators = [];
+    this._rawAsyncValidators = [];
+    this._onDestroyCallbacks = [];
+  }
+  /**
+   * @description
+   * Reports the value of the control if it is present, otherwise null.
+   */
+  get value() {
+    return this.control ? this.control.value : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is valid. A control is considered valid if no
+   * validation errors exist with the current value.
+   * If the control is not present, null is returned.
+   */
+  get valid() {
+    return this.control ? this.control.valid : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is invalid, meaning that an error exists in the input value.
+   * If the control is not present, null is returned.
+   */
+  get invalid() {
+    return this.control ? this.control.invalid : null;
+  }
+  /**
+   * @description
+   * Reports whether a control is pending, meaning that async validation is occurring and
+   * errors are not yet available for the input value. If the control is not present, null is
+   * returned.
+   */
+  get pending() {
+    return this.control ? this.control.pending : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is disabled, meaning that the control is disabled
+   * in the UI and is exempt from validation checks and excluded from aggregate
+   * values of ancestor controls. If the control is not present, null is returned.
+   */
+  get disabled() {
+    return this.control ? this.control.disabled : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is enabled, meaning that the control is included in ancestor
+   * calculations of validity or value. If the control is not present, null is returned.
+   */
+  get enabled() {
+    return this.control ? this.control.enabled : null;
+  }
+  /**
+   * @description
+   * Reports the control's validation errors. If the control is not present, null is returned.
+   */
+  get errors() {
+    return this.control ? this.control.errors : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is pristine, meaning that the user has not yet changed
+   * the value in the UI. If the control is not present, null is returned.
+   */
+  get pristine() {
+    return this.control ? this.control.pristine : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is dirty, meaning that the user has changed
+   * the value in the UI. If the control is not present, null is returned.
+   */
+  get dirty() {
+    return this.control ? this.control.dirty : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is touched, meaning that the user has triggered
+   * a `blur` event on it. If the control is not present, null is returned.
+   */
+  get touched() {
+    return this.control ? this.control.touched : null;
+  }
+  /**
+   * @description
+   * Reports the validation status of the control. Possible values include:
+   * 'VALID', 'INVALID', 'DISABLED', and 'PENDING'.
+   * If the control is not present, null is returned.
+   */
+  get status() {
+    return this.control ? this.control.status : null;
+  }
+  /**
+   * @description
+   * Reports whether the control is untouched, meaning that the user has not yet triggered
+   * a `blur` event on it. If the control is not present, null is returned.
+   */
+  get untouched() {
+    return this.control ? this.control.untouched : null;
+  }
+  /**
+   * @description
+   * Returns a multicasting observable that emits a validation status whenever it is
+   * calculated for the control. If the control is not present, null is returned.
+   */
+  get statusChanges() {
+    return this.control ? this.control.statusChanges : null;
+  }
+  /**
+   * @description
+   * Returns a multicasting observable of value changes for the control that emits every time the
+   * value of the control changes in the UI or programmatically.
+   * If the control is not present, null is returned.
+   */
+  get valueChanges() {
+    return this.control ? this.control.valueChanges : null;
+  }
+  /**
+   * @description
+   * Returns an array that represents the path from the top-level form to this control.
+   * Each index is the string name of the control on that level.
+   */
+  get path() {
+    return null;
+  }
+  /**
+   * Sets synchronous validators for this directive.
+   * @internal
+   */
+  _setValidators(validators) {
+    this._rawValidators = validators || [];
+    this._composedValidatorFn = composeValidators(this._rawValidators);
+  }
+  /**
+   * Sets asynchronous validators for this directive.
+   * @internal
+   */
+  _setAsyncValidators(validators) {
+    this._rawAsyncValidators = validators || [];
+    this._composedAsyncValidatorFn = composeAsyncValidators(this._rawAsyncValidators);
+  }
+  /**
+   * @description
+   * Synchronous validator function composed of all the synchronous validators registered with this
+   * directive.
+   */
+  get validator() {
+    return this._composedValidatorFn || null;
+  }
+  /**
+   * @description
+   * Asynchronous validator function composed of all the asynchronous validators registered with
+   * this directive.
+   */
+  get asyncValidator() {
+    return this._composedAsyncValidatorFn || null;
+  }
+  /**
+   * Internal function to register callbacks that should be invoked
+   * when directive instance is being destroyed.
+   * @internal
+   */
+  _registerOnDestroy(fn) {
+    this._onDestroyCallbacks.push(fn);
+  }
+  /**
+   * Internal function to invoke all registered "on destroy" callbacks.
+   * Note: calling this function also clears the list of callbacks.
+   * @internal
+   */
+  _invokeOnDestroyCallbacks() {
+    this._onDestroyCallbacks.forEach((fn) => fn());
+    this._onDestroyCallbacks = [];
+  }
+  /**
+   * @description
+   * Resets the control with the provided value if the control is present.
+   */
+  reset(value = void 0) {
+    if (this.control)
+      this.control.reset(value);
+  }
+  /**
+   * @description
+   * Reports whether the control with the given path has the error specified.
+   *
+   * @param errorCode The code of the error to check
+   * @param path A list of control names that designates how to move from the current control
+   * to the control that should be queried for errors.
+   *
+   * @usageNotes
+   * For example, for the following `FormGroup`:
+   *
+   * ```
+   * form = new FormGroup({
+   *   address: new FormGroup({ street: new FormControl() })
+   * });
+   * ```
+   *
+   * The path to the 'street' control from the root form would be 'address' -> 'street'.
+   *
+   * It can be provided to this method in one of two formats:
+   *
+   * 1. An array of string control names, e.g. `['address', 'street']`
+   * 1. A period-delimited list of control names in one string, e.g. `'address.street'`
+   *
+   * If no path is given, this method checks for the error on the current control.
+   *
+   * @returns whether the given error is present in the control at the given path.
+   *
+   * If the control is not present, false is returned.
+   */
+  hasError(errorCode, path) {
+    return this.control ? this.control.hasError(errorCode, path) : false;
+  }
+  /**
+   * @description
+   * Reports error data for the control with the given path.
+   *
+   * @param errorCode The code of the error to check
+   * @param path A list of control names that designates how to move from the current control
+   * to the control that should be queried for errors.
+   *
+   * @usageNotes
+   * For example, for the following `FormGroup`:
+   *
+   * ```
+   * form = new FormGroup({
+   *   address: new FormGroup({ street: new FormControl() })
+   * });
+   * ```
+   *
+   * The path to the 'street' control from the root form would be 'address' -> 'street'.
+   *
+   * It can be provided to this method in one of two formats:
+   *
+   * 1. An array of string control names, e.g. `['address', 'street']`
+   * 1. A period-delimited list of control names in one string, e.g. `'address.street'`
+   *
+   * @returns error data for that particular error. If the control or error is not present,
+   * null is returned.
+   */
+  getError(errorCode, path) {
+    return this.control ? this.control.getError(errorCode, path) : null;
+  }
+};
+var ControlContainer = class extends AbstractControlDirective {
+  /**
+   * @description
+   * The top-level form directive for the control.
+   */
+  get formDirective() {
+    return null;
+  }
+  /**
+   * @description
+   * The path to this group.
+   */
+  get path() {
+    return null;
+  }
+};
+var AbstractControlStatus = class {
+  constructor(cd) {
+    this._cd = cd;
+  }
+  get isTouched() {
+    return !!this._cd?.control?.touched;
+  }
+  get isUntouched() {
+    return !!this._cd?.control?.untouched;
+  }
+  get isPristine() {
+    return !!this._cd?.control?.pristine;
+  }
+  get isDirty() {
+    return !!this._cd?.control?.dirty;
+  }
+  get isValid() {
+    return !!this._cd?.control?.valid;
+  }
+  get isInvalid() {
+    return !!this._cd?.control?.invalid;
+  }
+  get isPending() {
+    return !!this._cd?.control?.pending;
+  }
+  get isSubmitted() {
+    return !!this._cd?.submitted;
+  }
+};
+var ngControlStatusHost = {
+  "[class.ng-untouched]": "isUntouched",
+  "[class.ng-touched]": "isTouched",
+  "[class.ng-pristine]": "isPristine",
+  "[class.ng-dirty]": "isDirty",
+  "[class.ng-valid]": "isValid",
+  "[class.ng-invalid]": "isInvalid",
+  "[class.ng-pending]": "isPending"
+};
+var ngGroupStatusHost = __spreadProps(__spreadValues({}, ngControlStatusHost), {
+  "[class.ng-submitted]": "isSubmitted"
+});
+var NgControlStatusGroup = /* @__PURE__ */ (() => {
+  const _NgControlStatusGroup = class _NgControlStatusGroup extends AbstractControlStatus {
+    constructor(cd) {
+      super(cd);
+    }
+  };
+  _NgControlStatusGroup.\u0275fac = function NgControlStatusGroup_Factory(t) {
+    return new (t || _NgControlStatusGroup)(\u0275\u0275directiveInject(ControlContainer, 10));
+  };
+  _NgControlStatusGroup.\u0275dir = /* @__PURE__ */ \u0275\u0275defineDirective({
+    type: _NgControlStatusGroup,
+    selectors: [["", "formGroupName", ""], ["", "formArrayName", ""], ["", "ngModelGroup", ""], ["", "formGroup", ""], ["form", 3, "ngNoForm", ""], ["", "ngForm", ""]],
+    hostVars: 16,
+    hostBindings: function NgControlStatusGroup_HostBindings(rf, ctx) {
+      if (rf & 2) {
+        \u0275\u0275classProp("ng-untouched", ctx.isUntouched)("ng-touched", ctx.isTouched)("ng-pristine", ctx.isPristine)("ng-dirty", ctx.isDirty)("ng-valid", ctx.isValid)("ng-invalid", ctx.isInvalid)("ng-pending", ctx.isPending)("ng-submitted", ctx.isSubmitted);
+      }
+    },
+    features: [\u0275\u0275InheritDefinitionFeature]
+  });
+  let NgControlStatusGroup2 = _NgControlStatusGroup;
+  return NgControlStatusGroup2;
+})();
+var CALL_SET_DISABLED_STATE = /* @__PURE__ */ new InjectionToken("CallSetDisabledState", {
+  providedIn: "root",
+  factory: () => setDisabledStateDefault
+});
+var setDisabledStateDefault = "always";
+var \u0275NgNoValidate = /* @__PURE__ */ (() => {
+  const _\u0275NgNoValidate = class _\u0275NgNoValidate {
+  };
+  _\u0275NgNoValidate.\u0275fac = function \u0275NgNoValidate_Factory(t) {
+    return new (t || _\u0275NgNoValidate)();
+  };
+  _\u0275NgNoValidate.\u0275dir = /* @__PURE__ */ \u0275\u0275defineDirective({
+    type: _\u0275NgNoValidate,
+    selectors: [["form", 3, "ngNoForm", "", 3, "ngNativeValidate", ""]],
+    hostAttrs: ["novalidate", ""]
+  });
+  let \u0275NgNoValidate2 = _\u0275NgNoValidate;
+  return \u0275NgNoValidate2;
+})();
+var RadioControlRegistryModule = /* @__PURE__ */ (() => {
+  const _RadioControlRegistryModule = class _RadioControlRegistryModule {
+  };
+  _RadioControlRegistryModule.\u0275fac = function RadioControlRegistryModule_Factory(t) {
+    return new (t || _RadioControlRegistryModule)();
+  };
+  _RadioControlRegistryModule.\u0275mod = /* @__PURE__ */ \u0275\u0275defineNgModule({
+    type: _RadioControlRegistryModule
+  });
+  _RadioControlRegistryModule.\u0275inj = /* @__PURE__ */ \u0275\u0275defineInjector({});
+  let RadioControlRegistryModule2 = _RadioControlRegistryModule;
+  return RadioControlRegistryModule2;
+})();
+var NG_MODEL_WITH_FORM_CONTROL_WARNING = /* @__PURE__ */ new InjectionToken("NgModelWithFormControlWarning");
+var \u0275InternalFormsSharedModule = /* @__PURE__ */ (() => {
+  const _\u0275InternalFormsSharedModule = class _\u0275InternalFormsSharedModule {
+  };
+  _\u0275InternalFormsSharedModule.\u0275fac = function \u0275InternalFormsSharedModule_Factory(t) {
+    return new (t || _\u0275InternalFormsSharedModule)();
+  };
+  _\u0275InternalFormsSharedModule.\u0275mod = /* @__PURE__ */ \u0275\u0275defineNgModule({
+    type: _\u0275InternalFormsSharedModule
+  });
+  _\u0275InternalFormsSharedModule.\u0275inj = /* @__PURE__ */ \u0275\u0275defineInjector({
+    imports: [RadioControlRegistryModule]
+  });
+  let \u0275InternalFormsSharedModule2 = _\u0275InternalFormsSharedModule;
+  return \u0275InternalFormsSharedModule2;
+})();
+var ReactiveFormsModule = /* @__PURE__ */ (() => {
+  const _ReactiveFormsModule = class _ReactiveFormsModule {
+    /**
+     * @description
+     * Provides options for configuring the reactive forms module.
+     *
+     * @param opts An object of configuration options
+     * * `warnOnNgModelWithFormControl` Configures when to emit a warning when an `ngModel`
+     * binding is used with reactive form directives.
+     * * `callSetDisabledState` Configures whether to `always` call `setDisabledState`, which is more
+     * correct, or to only call it `whenDisabled`, which is the legacy behavior.
+     */
+    static withConfig(opts) {
+      return {
+        ngModule: _ReactiveFormsModule,
+        providers: [{
+          provide: NG_MODEL_WITH_FORM_CONTROL_WARNING,
+          useValue: opts.warnOnNgModelWithFormControl ?? "always"
+        }, {
+          provide: CALL_SET_DISABLED_STATE,
+          useValue: opts.callSetDisabledState ?? setDisabledStateDefault
+        }]
+      };
+    }
+  };
+  _ReactiveFormsModule.\u0275fac = function ReactiveFormsModule_Factory(t) {
+    return new (t || _ReactiveFormsModule)();
+  };
+  _ReactiveFormsModule.\u0275mod = /* @__PURE__ */ \u0275\u0275defineNgModule({
+    type: _ReactiveFormsModule
+  });
+  _ReactiveFormsModule.\u0275inj = /* @__PURE__ */ \u0275\u0275defineInjector({
+    imports: [\u0275InternalFormsSharedModule]
+  });
+  let ReactiveFormsModule2 = _ReactiveFormsModule;
+  return ReactiveFormsModule2;
+})();
+
+// src/app/sign-in/sign-in.component.ts
+var SignInComponent = /* @__PURE__ */ (() => {
+  const _SignInComponent = class _SignInComponent {
+  };
+  _SignInComponent.\u0275fac = function SignInComponent_Factory(t) {
+    return new (t || _SignInComponent)();
+  };
+  _SignInComponent.\u0275cmp = /* @__PURE__ */ \u0275\u0275defineComponent({
+    type: _SignInComponent,
+    selectors: [["app-sign-in"]],
+    decls: 26,
+    vars: 0,
+    consts: [[1, "card"], [1, "card-header"], [1, "card-body"], ["action", "/auth/sign-in", "method", "POST"], [1, "center-block"], ["src", "https://lh5.googleusercontent.com/-b0-k99FZlyE/AAAAAAAAAAI/AAAAAAAAAAA/eu7opA4byxI/photo.jpg?sz=120", "alt", "", 1, "profile-img"], [1, "row", "gap-2"], [1, "form-group"], [1, "input-group"], [1, "input-group-addon"], [1, "glyphicon", "glyphicon-user"], ["placeholder", "Username", "name", "username", "type", "text", "autofocus", "", 1, "form-control"], [1, "glyphicon", "glyphicon-lock"], ["placeholder", "Password", "name", "password", "type", "password", "value", "", 1, "form-control"], [1, "form-group", "d-flex"], ["type", "submit", 1, "btn", "btn-primary", "mx-auto"], [1, "card-footer"], ["href", "/sign-up"]],
+    template: function SignInComponent_Template(rf, ctx) {
+      if (rf & 1) {
+        \u0275\u0275elementStart(0, "div", 0)(1, "div", 1)(2, "strong");
+        \u0275\u0275text(3, " Sign in to continue");
+        \u0275\u0275elementEnd()();
+        \u0275\u0275elementStart(4, "div", 2)(5, "form", 3)(6, "div", 4);
+        \u0275\u0275element(7, "img", 5);
+        \u0275\u0275elementEnd();
+        \u0275\u0275elementStart(8, "fieldset", 6)(9, "div", 7)(10, "div", 8)(11, "span", 9);
+        \u0275\u0275element(12, "i", 10);
+        \u0275\u0275elementEnd();
+        \u0275\u0275element(13, "input", 11);
+        \u0275\u0275elementEnd()();
+        \u0275\u0275elementStart(14, "div", 7)(15, "div", 8)(16, "span", 9);
+        \u0275\u0275element(17, "i", 12);
+        \u0275\u0275elementEnd();
+        \u0275\u0275element(18, "input", 13);
+        \u0275\u0275elementEnd()();
+        \u0275\u0275elementStart(19, "div", 14)(20, "button", 15);
+        \u0275\u0275text(21, "Sign In");
+        \u0275\u0275elementEnd()()()()();
+        \u0275\u0275elementStart(22, "div", 16);
+        \u0275\u0275text(23, " Don't have an account? ");
+        \u0275\u0275elementStart(24, "a", 17);
+        \u0275\u0275text(25, " Sign Up Here ");
+        \u0275\u0275elementEnd()()();
+      }
+    },
+    dependencies: [\u0275NgNoValidate, NgControlStatusGroup]
+  });
+  let SignInComponent2 = _SignInComponent;
+  return SignInComponent2;
+})();
+
+// src/app/sign-up/sign-up.component.ts
+var SignUpComponent = /* @__PURE__ */ (() => {
+  const _SignUpComponent = class _SignUpComponent {
+  };
+  _SignUpComponent.\u0275fac = function SignUpComponent_Factory(t) {
+    return new (t || _SignUpComponent)();
+  };
+  _SignUpComponent.\u0275cmp = /* @__PURE__ */ \u0275\u0275defineComponent({
+    type: _SignUpComponent,
+    selectors: [["app-sign-up"]],
+    features: [\u0275\u0275ProvidersFeature([])],
+    decls: 26,
+    vars: 0,
+    consts: [[1, "card"], [1, "card-header"], [1, "card-body"], ["action", "/auth/sign-up", "method", "POST"], [1, "center-block"], ["src", "https://lh5.googleusercontent.com/-b0-k99FZlyE/AAAAAAAAAAI/AAAAAAAAAAA/eu7opA4byxI/photo.jpg?sz=120", "alt", "", 1, "profile-img"], [1, "row", "gap-2"], [1, "form-group"], [1, "input-group"], [1, "input-group-addon"], [1, "glyphicon", "glyphicon-user"], ["placeholder", "Username", "name", "username", "type", "text", "autofocus", "", 1, "form-control"], [1, "glyphicon", "glyphicon-lock"], ["placeholder", "Password", "name", "password", "type", "password", "value", "", 1, "form-control"], [1, "form-group", "d-flex"], ["type", "submit", 1, "btn", "btn-primary", "mx-auto"], [1, "card-footer"], ["href", "/sign-in"]],
+    template: function SignUpComponent_Template(rf, ctx) {
+      if (rf & 1) {
+        \u0275\u0275elementStart(0, "div", 0)(1, "div", 1)(2, "strong");
+        \u0275\u0275text(3, " Sign up to join TIM!");
+        \u0275\u0275elementEnd()();
+        \u0275\u0275elementStart(4, "div", 2)(5, "form", 3)(6, "div", 4);
+        \u0275\u0275element(7, "img", 5);
+        \u0275\u0275elementEnd();
+        \u0275\u0275elementStart(8, "fieldset", 6)(9, "div", 7)(10, "div", 8)(11, "span", 9);
+        \u0275\u0275element(12, "i", 10);
+        \u0275\u0275elementEnd();
+        \u0275\u0275element(13, "input", 11);
+        \u0275\u0275elementEnd()();
+        \u0275\u0275elementStart(14, "div", 7)(15, "div", 8)(16, "span", 9);
+        \u0275\u0275element(17, "i", 12);
+        \u0275\u0275elementEnd();
+        \u0275\u0275element(18, "input", 13);
+        \u0275\u0275elementEnd()();
+        \u0275\u0275elementStart(19, "div", 14)(20, "button", 15);
+        \u0275\u0275text(21, "Sign Up");
+        \u0275\u0275elementEnd()()()()();
+        \u0275\u0275elementStart(22, "div", 16);
+        \u0275\u0275text(23, " Already have an account? ");
+        \u0275\u0275elementStart(24, "a", 17);
+        \u0275\u0275text(25, " Sign In Here ");
+        \u0275\u0275elementEnd()()();
+      }
+    },
+    dependencies: [\u0275NgNoValidate, NgControlStatusGroup]
+  });
+  let SignUpComponent2 = _SignUpComponent;
+  return SignUpComponent2;
 })();
 
 // src/app/app.module.ts
@@ -15220,10 +16408,10 @@ var AppModule = /* @__PURE__ */ (() => {
   };
   _AppModule.\u0275mod = /* @__PURE__ */ \u0275\u0275defineNgModule({
     type: _AppModule,
-    bootstrap: [JobListComponent]
+    bootstrap: [SignInComponent, JobListComponent, SignUpComponent]
   });
   _AppModule.\u0275inj = /* @__PURE__ */ \u0275\u0275defineInjector({
-    imports: [BrowserModule, HttpClientModule]
+    imports: [BrowserModule, HttpClientModule, ReactiveFormsModule]
   });
   let AppModule2 = _AppModule;
   return AppModule2;

@@ -1,31 +1,47 @@
 extends layout
-
 block content
+ 
   .row.justify-content-center
-    .col-md-4.card
-      .card-header
-        strong  Sign in to continue
-      .card-body
-        form(action='/sign-in',method='POST')
-            .center-block
-              img.profile-img(src='https://lh5.googleusercontent.com/-b0-k99FZlyE/AAAAAAAAAAI/AAAAAAAAAAA/eu7opA4byxI/photo.jpg?sz=120', alt='')
-            fieldset.row.gap-2
-              .form-group
-                .input-group
-                  span.input-group-addon
-                    i.glyphicon.glyphicon-user
-                  input.form-control(placeholder='Email', name='email', type='text', autofocus='')
+    .col-md-4
+      app-sign-in ...
+      //- .card.mb-3
+        .card-header
+          strong  Sign in to continue
+        .card-body
+          form(action='/auth/sign-in',method='POST')
+              .center-block
+                img.profile-img(src='https://lh5.googleusercontent.com/-b0-k99FZlyE/AAAAAAAAAAI/AAAAAAAAAAA/eu7opA4byxI/photo.jpg?sz=120', alt='')
+              fieldset.row.gap-2
+                .form-group
+                  .input-group
+                    span.input-group-addon
+                      i.glyphicon.glyphicon-user
+                    input.form-control(placeholder='Username', name='username', type='text', autofocus='')
 
-              .form-group
-                .input-group
-                  span.input-group-addon
-                    i.glyphicon.glyphicon-lock
-                  input.form-control(placeholder='Password', name='password', type='password', value='')
+                .form-group
+                  .input-group
+                    span.input-group-addon
+                      i.glyphicon.glyphicon-lock
+                    input.form-control(placeholder='Password', name='password', type='password', value='')
 
-              .form-group.d-flex
-                button.btn.btn-primary.mx-auto(type="submit") Sign In
+                .form-group.d-flex
+                  button.btn.btn-primary.mx-auto(type="submit") Sign In
 
-      .card-footer
-        | Don&apos;t have an account?  
-        a(href='/sign-up')  Sign Up Here 
+        .card-footer
+          | Don&apos;t have an account?  
+          a(href='/sign-up')  Sign Up Here 
 
+
+
+        app-sign-up ...
+
+
+      if error != "" && error != null
+        .alert.alert-dismissible.alert-danger.mt-3
+              button.btn-close(type='button', data-bs-dismiss='alert')
+              p= error
+
+  div(hidden) 
+    app-sign-up
+    app-job-list
+    app-user-account

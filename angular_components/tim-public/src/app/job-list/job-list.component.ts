@@ -21,7 +21,6 @@ export class Job {
 })
 export class JobListComponent implements OnInit {
   constructor(private apiDataService: ApiDataService) {}
-  header = 'All Jobs';
   jobs: Job[] = [];
 
   private getJobs(): void {
