@@ -11,7 +11,7 @@ export class ApiDataService {
   private apiBaseUrl : string =
     process.env['NODE_ENV'] == 'PRODUCTION'
       ? 'https://tim-2k4a.onrender.com/api'
-      : 'http://localhost:2048/ap';
+      : 'http://localhost:2048/api';
 
   public getJobs(): Promise<Job[]> {
     const url: string = this.apiBaseUrl + '/jobs';
