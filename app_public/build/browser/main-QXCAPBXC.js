@@ -12094,9 +12094,6 @@ function internalProvideZoneChangeDetection(ngZoneFactory) {
     useFactory: isStableFactory
   }];
 }
-function isDevMode() {
-  return typeof ngDevMode === "undefined" || !!ngDevMode;
-}
 var platformCore = /* @__PURE__ */ createPlatformFactory(null, "core", []);
 var ApplicationModule = /* @__PURE__ */ (() => {
   const _ApplicationModule = class _ApplicationModule {
@@ -15683,7 +15680,7 @@ var ApiDataService = /* @__PURE__ */ (() => {
   const _ApiDataService = class _ApiDataService {
     constructor(http) {
       this.http = http;
-      this.apiBaseUrl = isDevMode() ? "http://localhost:2048/api" : "https://tim-2k4a.onrender.com/api";
+      this.apiBaseUrl = "https://tim-2k4a.onrender.com/api";
     }
     getJobs() {
       const url = this.apiBaseUrl + "/jobs";
